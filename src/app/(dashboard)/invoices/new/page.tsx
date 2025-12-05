@@ -1,6 +1,8 @@
 import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import { getCustomers } from "@/lib/actions/customer.actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewInvoicePage() {
     const customers = await getCustomers();
 

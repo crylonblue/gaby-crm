@@ -13,6 +13,8 @@ import { Plus, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 
+export const dynamic = "force-dynamic";
+
 export default async function InvoicesPage() {
     const invoices = await getInvoices();
 

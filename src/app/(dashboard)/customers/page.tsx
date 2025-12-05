@@ -12,6 +12,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { CustomerRow } from "@/components/customers/CustomerRow";
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomersPage() {
     const customers = await getCustomers();
 
