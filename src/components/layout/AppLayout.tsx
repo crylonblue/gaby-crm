@@ -25,7 +25,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="flex min-h-screen md:h-screen bg-gray-100 dark:bg-gray-900">
             {/* Sidebar for Desktop */}
             <aside className="hidden w-64 flex-col border-r bg-white dark:bg-gray-800 md:flex">
                 <div className="flex h-16 items-center justify-center border-b px-4">
@@ -65,8 +65,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </aside>
 
             {/* Main Content */}
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <header className="flex h-16 items-center justify-between border-b bg-white px-4 dark:bg-gray-800 md:hidden">
+            <div className="flex flex-1 flex-col md:overflow-hidden">
+                <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-4 dark:bg-gray-800 md:hidden">
                     <div className="flex items-center">
                         <Button
                             variant="ghost"
@@ -81,7 +81,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
                 {/* Mobile Sidebar (Simple Overlay) */}
                 {sidebarOpen && (
-                    <div className="absolute inset-0 z-50 flex md:hidden">
+                    <div className="fixed inset-0 z-50 flex md:hidden">
                         <div className="w-64 bg-white p-4 shadow-lg dark:bg-gray-800 flex flex-col">
                             <div className="mb-6 flex items-center justify-between">
                                 <span className="text-lg font-bold">Menu</span>
@@ -129,7 +129,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                 )}
 
-                <main className="flex-1 overflow-auto p-4 md:p-8">{children}</main>
+                <main className="flex-1 p-4 md:overflow-auto md:p-8">{children}</main>
             </div>
         </div>
     );
