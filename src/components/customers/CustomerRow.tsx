@@ -9,7 +9,7 @@ import { DeleteCustomerDialog } from "./DeleteCustomerDialog";
 import { useRouter } from "next/navigation";
 
 interface CustomerRowProps {
-    customer: Customer;
+    customer: Customer & { yearlyBudget?: number };
 }
 
 export function CustomerRow({ customer }: CustomerRowProps) {
@@ -40,8 +40,13 @@ export function CustomerRow({ customer }: CustomerRowProps) {
                 </Link>
             </TableCell>
             <TableCell className="p-0">
+                <Link href={`/customers/${customer.id}`} className="block p-4 font-mono text-right pr-8" onClick={(e) => e.stopPropagation()}>
+                    {(customer.yearlyBudget || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                </Link>
+            </TableCell>
+            <TableCell className="p-0">
                 <Link href={`/customers/${customer.id}`} className="block p-4" onClick={(e) => e.stopPropagation()}>
-                    {customer.mobilePhone || customer.landlinePhone}
+                    {customer.careLevel || "-"}
                 </Link>
             </TableCell>
             <TableCell className="flex items-center gap-2 p-4">

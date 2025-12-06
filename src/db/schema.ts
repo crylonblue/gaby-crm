@@ -64,8 +64,19 @@ export const invoices = sqliteTable("invoices", {
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
 });
 
+export const customerBudgets = sqliteTable("customer_budgets", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    customerId: integer("customer_id").notNull(),
+    year: integer("year").notNull(),
+    amount: real("amount").notNull().default(0),
+});
+
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 
 export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;
+
+export type CustomerBudget = typeof customerBudgets.$inferSelect;
+export type NewCustomerBudget = typeof customerBudgets.$inferInsert;
+

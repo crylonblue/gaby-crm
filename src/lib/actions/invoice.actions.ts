@@ -1,13 +1,37 @@
 "use server";
 
 import { db } from "@/db";
-import { invoices, NewInvoice } from "@/db/schema";
-import { desc, eq, and, gte, lte, ne } from "drizzle-orm";
+import { invoices, NewInvoice, customerBudgets } from "@/db/schema";
+import { desc, eq, and, gte, lte, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createInvoice(data: NewInvoice) {
     try {
         await db.insert(invoices).values(data);
+
+        // Update Customer Budget
+        const amount = ((data.hours * (data.ratePerHour ?? 0)) + ((data.km ?? 0) * (data.ratePerKm ?? 0))) * 1.19;
+        const year = new Date(data.date).getFullYear();
+
+        const existingBudget = await db.select().from(customerBudgets).where(
+            and(
+                eq(customerBudgets.customerId, data.customerId),
+                eq(customerBudgets.year, year)
+            )
+        );
+
+        if (existingBudget.length > 0) {
+            await db.update(customerBudgets)
+                .set({ amount: sql`${customerBudgets.amount} + ${amount}` })
+                .where(eq(customerBudgets.id, existingBudget[0].id));
+        } else {
+            await db.insert(customerBudgets).values({
+                customerId: data.customerId,
+                year: year,
+                amount: amount,
+            });
+        }
+
 
         // Trigger webhook
         try {
@@ -39,7 +63,25 @@ export async function getInvoices() {
 
 export async function deleteInvoice(id: number) {
     try {
+        const invoice = await db.select().from(invoices).where(eq(invoices.id, id));
+        if (invoice.length === 0) return { success: false, error: "Rechnung nicht gefunden" };
+
+        const inv = invoice[0];
+        const amount = ((inv.hours * inv.ratePerHour) + (inv.km * inv.ratePerKm)) * 1.19;
+        const year = new Date(inv.date).getFullYear();
+
         await db.delete(invoices).where(eq(invoices.id, id));
+
+        // Decrement Budget
+        await db.update(customerBudgets)
+            .set({ amount: sql`${customerBudgets.amount} - ${amount}` })
+            .where(
+                and(
+                    eq(customerBudgets.customerId, inv.customerId),
+                    eq(customerBudgets.year, year)
+                )
+            );
+
         revalidatePath("/invoices");
         return { success: true };
     } catch (error) {

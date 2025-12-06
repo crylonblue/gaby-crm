@@ -1,18 +1,47 @@
 "use server";
 
 import { db } from "@/db";
-import { customers, NewCustomer } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { customers, NewCustomer, customerBudgets } from "@/db/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function getCustomers() {
-    const data = await db.select().from(customers).orderBy(desc(customers.id));
-    return data;
+    const allCustomers = await db.select().from(customers).orderBy(desc(customers.id));
+    const currentYear = new Date().getFullYear();
+
+    const customersWithBudget = await Promise.all(allCustomers.map(async (customer) => {
+        const budget = await db.select().from(customerBudgets).where(
+            and(
+                eq(customerBudgets.customerId, customer.id),
+                eq(customerBudgets.year, currentYear)
+            )
+        );
+        return {
+            ...customer,
+            yearlyBudget: budget.length > 0 ? budget[0].amount : 0,
+        };
+    }));
+
+    return customersWithBudget;
+
 }
 
 export async function getCustomer(id: number) {
     const data = await db.select().from(customers).where(eq(customers.id, id));
-    return data[0];
+    if (data.length === 0) return null;
+
+    const currentYear = new Date().getFullYear();
+    const budget = await db.select().from(customerBudgets).where(
+        and(
+            eq(customerBudgets.customerId, id),
+            eq(customerBudgets.year, currentYear)
+        )
+    );
+
+    return {
+        ...data[0],
+        yearlyBudget: budget.length > 0 ? budget[0].amount : 0,
+    };
 }
 
 export async function createCustomer(data: NewCustomer) {

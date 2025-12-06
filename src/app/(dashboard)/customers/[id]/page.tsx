@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { Edit, Phone, Mail, MapPin, ArrowLeft, Calendar, FileText, HeartPulse, User } from "lucide-react";
+import { Edit, Phone, Mail, MapPin, ArrowLeft, Calendar, FileText, HeartPulse, User, Euro } from "lucide-react";
 import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 import { Badge } from "@/components/ui/badge";
 
@@ -30,6 +30,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     <p className="text-muted-foreground flex items-center gap-2">
                         <MapPin className="h-3 w-3" /> {customer.street} {customer.houseNumber}, {customer.postalCode} {customer.city}
                     </p>
+                    <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-sm py-1 px-3 border-emerald-500/50 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                            <Euro className="h-3 w-3 mr-1" />
+                            Abgerechnet ({new Date().getFullYear()}): {(customer as any).yearlyBudget?.toLocaleString("de-DE", { style: "currency", currency: "EUR" }) || "0,00 €"}
+                        </Badge>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button asChild variant="outline">

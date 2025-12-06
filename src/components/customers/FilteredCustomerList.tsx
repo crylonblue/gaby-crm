@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { CustomerRow } from "@/components/customers/CustomerRow";
 
-import { Search, Phone, MapPin } from "lucide-react";
+import { Search, Phone, MapPin, Euro, HeartPulse } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -53,7 +53,8 @@ export function FilteredCustomerList({ customers }: FilteredCustomerListProps) {
                             <TableHead>Nachname</TableHead>
                             <TableHead>Vorname</TableHead>
                             <TableHead>Stadt</TableHead>
-                            <TableHead>Telefon</TableHead>
+                            <TableHead>Abgerechnet ({new Date().getFullYear()})</TableHead>
+                            <TableHead>Pflegegrad</TableHead>
                             <TableHead className="w-[100px]">Aktionen</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -97,14 +98,18 @@ export function FilteredCustomerList({ customers }: FilteredCustomerListProps) {
                                         </span>
                                     </div>
                                 )}
-                                {(customer.mobilePhone || customer.landlinePhone) && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Phone className="h-4 w-4 shrink-0" />
-                                        <span>
-                                            {customer.mobilePhone || customer.landlinePhone}
-                                        </span>
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <HeartPulse className="h-4 w-4 shrink-0" />
+                                    <span>
+                                        Pflegegrad: {customer.careLevel || "-"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm font-medium">
+                                    <Euro className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>
+                                        Abgerechnet: {(customer as any).yearlyBudget?.toLocaleString("de-DE", { style: "currency", currency: "EUR" }) || "0,00 €"}
+                                    </span>
+                                </div>
                                 <Button asChild variant="outline" size="sm" className="w-full mt-2">
                                     <Link href={`/customers/${customer.id}`}>
                                         Details anzeigen
