@@ -15,11 +15,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createInvoice } from "@/lib/actions/invoice.actions";
+import { createInvoice, getInvoiceCountForCustomer } from "@/lib/actions/invoice.actions";
 import { toast } from "sonner";
 import { Customer } from "@/db/schema";
-import { useTransition } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const invoiceSchema = z.object({
     customerId: z.string().min(1, "Kunde ist erforderlich"),
@@ -28,6 +29,7 @@ const invoiceSchema = z.object({
     km: z.coerce.number().optional().default(0),
     ratePerHour: z.coerce.number().min(0, "Preis muss positiv sein").default(47.0),
     ratePerKm: z.coerce.number().min(0, "Preis muss positiv sein").default(0.30),
+    attachAbtretungserklaerung: z.boolean().optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -39,6 +41,7 @@ interface InvoiceFormProps {
 export function InvoiceForm({ customers }: InvoiceFormProps) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const [showAbtretungserklaerung, setShowAbtretungserklaerung] = useState(false);
 
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceSchema) as any,
@@ -49,8 +52,65 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
             km: 0,
             ratePerHour: 47.0,
             ratePerKm: 0.30,
+            attachAbtretungserklaerung: false,
         },
     });
+
+    const selectedCustomerId = form.watch("customerId");
+
+    useEffect(() => {
+        const checkFirstInvoice = async () => {
+            if (!selectedCustomerId) {
+                setShowAbtretungserklaerung(false);
+                return;
+            }
+
+            const customer = customers.find(c => c.id.toString() === selectedCustomerId);
+            if (!customer || !customer.abtretungserklaerungUrl) {
+                setShowAbtretungserklaerung(false);
+                return;
+            }
+
+            const count = await getInvoiceCountForCustomer(customer.id);
+            if (count === 0) {
+                setShowAbtretungserklaerung(true);
+                form.setValue("attachAbtretungserklaerung", true);
+            } else {
+                setShowAbtretungserklaerung(false); // Or keep it checkable but not default? spec says "optional" but logic implies auto-enable for first.
+                // "If we detect, that it is the first invoice for that given user we enable adding the Abtretungserklärung to the invoice."
+                // "So we also have to change the schema of the Invoice to hold the Abtretungserklärung but as optional."
+                // I will allow it to be optional always if available, but auto-check for first.
+                // Actually the requirement: "This has to come with the first invoice... we have to make it optional... If we detect... first invoice... we enable adding"
+                // This implies "enable adding" might mean "show the option". 
+                // Let's show the option if the customer has the URL, but default it to TRUE if it's the first invoice.
+                // Re-reading: "If we detect, that it is the first invoice for that given user we enable adding the Abtretungserklärung to the invoice."
+                // This sounds like the Option is ONLY available for the first invoice?
+                // "But since we are not sure if we already have sent the 'Abtretungserklärung' we have to make it optional."
+                // So I will make it always available if customer has one, but highlight/default it for the first one.
+
+                // Let's simply always show it if customer has one, and verify default logic.
+                // Actually, let's stick to: Always show if customer has one.
+                // Default to true if count == 0.
+            }
+        };
+
+        // Revised logic: Always show if customer has URL.
+        const customer = customers.find(c => c.id.toString() === selectedCustomerId);
+        if (customer?.abtretungserklaerungUrl) {
+            setShowAbtretungserklaerung(true);
+            getInvoiceCountForCustomer(customer.id).then(count => {
+                if (count === 0) {
+                    form.setValue("attachAbtretungserklaerung", true);
+                } else {
+                    form.setValue("attachAbtretungserklaerung", false);
+                }
+            });
+        } else {
+            setShowAbtretungserklaerung(false);
+        }
+
+    }, [selectedCustomerId, customers, form]);
+
 
     function onSubmit(data: InvoiceFormValues) {
         startTransition(async () => {
@@ -86,12 +146,12 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 km: data.km,
                 ratePerHour: data.ratePerHour,
                 ratePerKm: data.ratePerKm,
+
+                // Abtretungserklärung
+                abtretungserklaerungUrl: data.attachAbtretungserklaerung ? selectedCustomer.abtretungserklaerungUrl : null,
             };
 
-            // @ts-ignore - DB insert type might be strict about optional fields, but we provide all required ones.
-            // Using ignore to avoid strict type warring on some optional fields mismatches if any.
-            // Actually, let's try strict first.
-
+            // @ts-ignore
             const result = await createInvoice(invoiceData as any);
 
             if (result.success) {
@@ -202,6 +262,31 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                         </FormItem>
                     )}
                 />
+
+                {showAbtretungserklaerung && (
+                    <FormField
+                        control={form.control}
+                        name="attachAbtretungserklaerung"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        Abtretungserklärung beifügen
+                                    </FormLabel>
+                                    <p className="text-sm text-muted-foreground">
+                                        Fügt die hinterlegte Abtretungserklärung zur Rechnung hinzu.
+                                    </p>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+                )}
 
                 <div className="flex items-center gap-4">
                     <Button type="button" variant="outline" onClick={() => router.push("/invoices")}>

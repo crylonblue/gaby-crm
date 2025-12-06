@@ -21,6 +21,7 @@ export const customers = sqliteTable("customers", {
     relativeEmail: text("relative_email"),
     email: text("email"),
     notes: text("notes"),
+    abtretungserklaerungUrl: text("abtretungserklaerung_url"),
 });
 
 export const invoices = sqliteTable("invoices", {
@@ -63,6 +64,7 @@ export const invoices = sqliteTable("invoices", {
 
     createdAt: text("created_at").notNull(), // ISO String
     invoicePdfUrl: text("invoice_pdf_url"), // URL provided by worker
+    abtretungserklaerungUrl: text("abtretungserklaerung_url"),
 });
 
 export type Customer = typeof customers.$inferSelect;

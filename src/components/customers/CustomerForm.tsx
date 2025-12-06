@@ -20,6 +20,8 @@ import { Customer } from "@/db/schema";
 import { useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadFile } from "@/lib/actions/upload.actions";
+import { useState } from "react";
 
 const customerSchema = z.object({
     lastName: z.string().min(1, "Nachname ist erforderlich"),
@@ -41,6 +43,7 @@ const customerSchema = z.object({
     relativePhone: z.string().optional(),
     relativeEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
     notes: z.string().optional(),
+    abtretungserklaerungUrl: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -52,6 +55,7 @@ interface CustomerFormProps {
 export function CustomerForm({ customer }: CustomerFormProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [isUploading, setIsUploading] = useState(false);
 
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerSchema),
@@ -75,6 +79,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             relativePhone: customer?.relativePhone || "",
             relativeEmail: customer?.relativeEmail || "",
             notes: customer?.notes || "",
+            abtretungserklaerungUrl: customer?.abtretungserklaerungUrl || "",
         },
     });
 
@@ -95,6 +100,30 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             }
         });
     }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const result = await uploadFile(formData);
+            if (result.success && result.url) {
+                form.setValue("abtretungserklaerungUrl", result.url);
+                toast.success("Datei erfolgreich hochgeladen");
+            } else {
+                toast.error("Fehler beim Hochladen: " + result.error);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Upload fehlgeschlagen");
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     return (
         <Form {...form}>
@@ -312,6 +341,37 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                     </div>
                 </div>
 
+                <div className="border-t pt-4">
+                    <h3 className="mb-4 text-lg font-medium">Dokumente</h3>
+                    <FormField
+                        control={form.control}
+                        name="abtretungserklaerungUrl"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Abtretungserklärung</FormLabel>
+                                <div className="space-y-2">
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            accept=".pdf,.png,.jpg,.jpeg"
+                                            onChange={handleFileUpload}
+                                            disabled={isUploading}
+                                        />
+                                    </FormControl>
+                                    {isUploading && <p className="text-sm text-muted-foreground">Wird hochgeladen...</p>}
+                                    {field.value && (
+                                        <div className="text-sm">
+                                            Aktuelle Datei: <a href={field.value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Ansehen</a>
+                                            <input type="hidden" {...field} />
+                                        </div>
+                                    )}
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
                 <FormField
                     control={form.control}
                     name="notes"
@@ -330,7 +390,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                     <Button type="button" variant="outline" onClick={() => router.push("/customers")}>
                         Abbrechen
                     </Button>
-                    <Button type="submit" disabled={isPending}>
+                    <Button type="submit" disabled={isPending || isUploading}>
                         {isPending ? "Speichern..." : customer ? "Aktualisieren" : "Erstellen"}
                     </Button>
                 </div>

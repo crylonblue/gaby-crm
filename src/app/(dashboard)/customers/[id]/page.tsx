@@ -177,6 +177,27 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Documents Info */}
+                {customer.abtretungserklaerungUrl && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="h-5 w-5" /> Dokumente
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between p-3 border rounded-md">
+                                <span className="text-sm font-medium">Abtretungserklärung</span>
+                                <Button variant="outline" size="sm" asChild>
+                                    <a href={customer.abtretungserklaerungUrl} target="_blank" rel="noopener noreferrer">
+                                        Ansehen
+                                    </a>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );

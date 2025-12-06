@@ -47,3 +47,16 @@ export async function deleteInvoice(id: number) {
         return { success: false, error: "Fehler beim Löschen der Rechnung" };
     }
 }
+
+export async function getInvoiceCountForCustomer(customerId: number) {
+    try {
+        const result = await db
+            .select({ count: invoices.id })
+            .from(invoices)
+            .where(eq(invoices.customerId, customerId));
+        return result.length;
+    } catch (error) {
+        console.error("Error counting invoices:", error);
+        return 0;
+    }
+}
