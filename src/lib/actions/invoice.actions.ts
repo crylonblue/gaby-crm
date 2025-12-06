@@ -12,7 +12,7 @@ export async function createInvoice(data: NewInvoice) {
         // Trigger webhook
         try {
             await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
-                method: "POST",
+                method: "GET",
                 headers: {
                     "Content-Type": "application/json",
                 },
