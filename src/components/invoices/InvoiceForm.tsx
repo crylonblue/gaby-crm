@@ -78,7 +78,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 houseNumber: selectedCustomer.houseNumber || "",
                 postalCode: selectedCustomer.postalCode || "",
                 city: selectedCustomer.city || "",
-                invoiceEmail: selectedCustomer.email || "",
+                invoiceEmail: selectedCustomer.healthInsuranceEmail || "",
 
                 // Invoice Data
                 hours: data.hours,
