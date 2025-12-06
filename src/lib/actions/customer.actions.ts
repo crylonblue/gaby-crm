@@ -30,3 +30,19 @@ export async function deleteCustomer(id: number) {
     await db.delete(customers).where(eq(customers.id, id));
     revalidatePath("/customers");
 }
+
+export async function importCustomers(data: NewCustomer[]) {
+    try {
+        if (!data || data.length === 0) return { success: true, count: 0 };
+
+        // SQLite has a limit on variables in a query (usually 999 or 32766), so for safety we can chunk it if needed.
+        // But for a "small" import, direct insert is usually fine.
+
+        await db.insert(customers).values(data);
+        revalidatePath("/customers");
+        return { success: true, count: data.length };
+    } catch (error) {
+        console.error("Import error:", error);
+        return { success: false, error: "Failed to import customers. Check data format or duplicates." };
+    }
+}

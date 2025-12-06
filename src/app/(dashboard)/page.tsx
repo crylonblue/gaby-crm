@@ -11,7 +11,7 @@ export default function Home() {
         <p className="text-muted-foreground">Willkommen bei GabyCRM.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         {/* Quick Action: Add Customer */}
         <Card>
           <CardHeader>
@@ -66,6 +66,26 @@ export default function Home() {
           <CardFooter>
             <Button asChild variant="outline" className="w-full">
               <Link href="/customers">
+                Zur Übersicht
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Quick Action: View Invoices */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-600" />
+              Rechnungsliste
+            </CardTitle>
+            <CardDescription>
+              Verwalten Sie alle erstellten Rechnungen.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/invoices">
                 Zur Übersicht
               </Link>
             </Button>

@@ -36,7 +36,7 @@ export default async function InvoicesPage() {
                             <TableHead>Datum</TableHead>
                             <TableHead>Kunde</TableHead>
                             <TableHead>Rechnungs-Nr.</TableHead>
-                            <TableHead className="text-right">Betrag</TableHead>
+                            <TableHead className="text-right">Betrag (Brutto)</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="w-[100px]"></TableHead>
                         </TableRow>
@@ -50,7 +50,7 @@ export default async function InvoicesPage() {
                             </TableRow>
                         ) : (
                             invoices.map((invoice) => {
-                                const amount = (invoice.hours * invoice.ratePerHour) + (invoice.km * invoice.ratePerKm);
+                                const amount = ((invoice.hours * invoice.ratePerHour) + (invoice.km * invoice.ratePerKm)) * 1.19;
 
                                 return (
                                     <TableRow key={invoice.id}>
