@@ -14,13 +14,28 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createInvoice, getInvoiceCountForCustomer } from "@/lib/actions/invoice.actions";
 import { toast } from "sonner";
 import { Customer } from "@/db/schema";
 import { useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 const invoiceSchema = z.object({
     customerId: z.string().min(1, "Kunde ist erforderlich"),
@@ -42,6 +57,8 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const [showAbtretungserklaerung, setShowAbtretungserklaerung] = useState(false);
+
+    const [open, setOpen] = useState(false);
 
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceSchema) as any,
@@ -76,25 +93,10 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 setShowAbtretungserklaerung(true);
                 form.setValue("attachAbtretungserklaerung", true);
             } else {
-                setShowAbtretungserklaerung(false); // Or keep it checkable but not default? spec says "optional" but logic implies auto-enable for first.
-                // "If we detect, that it is the first invoice for that given user we enable adding the Abtretungserklärung to the invoice."
-                // "So we also have to change the schema of the Invoice to hold the Abtretungserklärung but as optional."
-                // I will allow it to be optional always if available, but auto-check for first.
-                // Actually the requirement: "This has to come with the first invoice... we have to make it optional... If we detect... first invoice... we enable adding"
-                // This implies "enable adding" might mean "show the option". 
-                // Let's show the option if the customer has the URL, but default it to TRUE if it's the first invoice.
-                // Re-reading: "If we detect, that it is the first invoice for that given user we enable adding the Abtretungserklärung to the invoice."
-                // This sounds like the Option is ONLY available for the first invoice?
-                // "But since we are not sure if we already have sent the 'Abtretungserklärung' we have to make it optional."
-                // So I will make it always available if customer has one, but highlight/default it for the first one.
-
-                // Let's simply always show it if customer has one, and verify default logic.
-                // Actually, let's stick to: Always show if customer has one.
-                // Default to true if count == 0.
+                setShowAbtretungserklaerung(false);
             }
         };
 
-        // Revised logic: Always show if customer has URL.
         const customer = customers.find(c => c.id.toString() === selectedCustomerId);
         if (customer?.abtretungserklaerungUrl) {
             setShowAbtretungserklaerung(true);
@@ -170,22 +172,66 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                     control={form.control}
                     name="customerId"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                             <FormLabel>Kunde</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Kunde auswählen" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {customers.map((customer) => (
-                                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                                            {customer.lastName}, {customer.firstName} ({customer.city})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={open} onOpenChange={setOpen}>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={open}
+                                            className={cn(
+                                                "w-full justify-between",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value
+                                                ? customers.find(
+                                                    (customer) => customer.id.toString() === field.value
+                                                )?.lastName + ", " + customers.find(
+                                                    (customer) => customer.id.toString() === field.value
+                                                )?.firstName
+                                                : "Kunde auswählen..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="p-0"
+                                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                                    align="start"
+                                >
+                                    <Command>
+                                        <CommandInput placeholder="Kunde suchen..." className="h-9" />
+                                        <CommandList>
+                                            <CommandEmpty>Kein Kunde gefunden.</CommandEmpty>
+                                            <CommandGroup>
+                                                {customers.map((customer) => (
+                                                    <CommandItem
+                                                        value={`${customer.lastName}, ${customer.firstName}`}
+                                                        key={customer.id}
+                                                        onSelect={() => {
+                                                            form.setValue("customerId", customer.id.toString());
+                                                            setOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                customer.id.toString() === field.value
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {customer.lastName}, {customer.firstName} ({customer.city})
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                             <FormMessage />
                         </FormItem>
                     )}

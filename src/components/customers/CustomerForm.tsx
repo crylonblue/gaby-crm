@@ -34,14 +34,10 @@ const customerSchema = z.object({
     houseNumber: z.string().optional(),
     postalCode: z.string().optional(),
     city: z.string().optional(),
-    insuranceNumber: z.string().optional(),
-    healthInsurance: z.string().optional(),
-    healthInsurancePhone: z.string().optional(),
-    healthInsuranceEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
     careLevel: z.string().optional(),
-    relativeName: z.string().optional(),
-    relativePhone: z.string().optional(),
-    relativeEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
+    healthInsurance: z.string().optional(),
+    healthInsuranceEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
+    insuranceNumber: z.string().optional(),
     notes: z.string().optional(),
     abtretungserklaerungUrl: z.string().optional(),
 });
@@ -70,14 +66,10 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             houseNumber: customer?.houseNumber || "",
             postalCode: customer?.postalCode || "",
             city: customer?.city || "",
-            insuranceNumber: customer?.insuranceNumber || "",
-            healthInsurance: customer?.healthInsurance || "",
-            healthInsurancePhone: customer?.healthInsurancePhone || "",
-            healthInsuranceEmail: customer?.healthInsuranceEmail || "",
             careLevel: customer?.careLevel || "",
-            relativeName: customer?.relativeName || "",
-            relativePhone: customer?.relativePhone || "",
-            relativeEmail: customer?.relativeEmail || "",
+            healthInsurance: customer?.healthInsurance || "",
+            healthInsuranceEmail: customer?.healthInsuranceEmail || "",
+            insuranceNumber: customer?.insuranceNumber || "",
             notes: customer?.notes || "",
             abtretungserklaerungUrl: customer?.abtretungserklaerungUrl || "",
         },
@@ -137,6 +129,19 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                                 <FormLabel>Vorname</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Max" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="careLevel"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pflegestufe</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="1-5" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

@@ -128,34 +128,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     </CardContent>
                 </Card>
 
-                {/* Relative Info */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5" /> Angehörige(r)
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {customer.relativeName ? (
-                            <>
-                                <p className="font-medium text-lg">{customer.relativeName}</p>
-                                {customer.relativePhone && (
-                                    <a href={`tel:${customer.relativePhone}`} className="text-blue-600 hover:underline flex items-center gap-2 text-sm">
-                                        <Phone className="h-3 w-3" /> {customer.relativePhone}
-                                    </a>
-                                )}
-                                {customer.relativeEmail && (
-                                    <a href={`mailto:${customer.relativeEmail}`} className="text-blue-600 hover:underline flex items-center gap-2 text-sm">
-                                        <Mail className="h-3 w-3" /> {customer.relativeEmail}
-                                    </a>
-                                )}
-                            </>
-                        ) : (
-                            <p className="text-muted-foreground italic">Keine Angehörigen hinterlegt.</p>
-                        )}
-                    </CardContent>
-                </Card>
-
                 {/* General Info */}
                 <Card>
                     <CardHeader>

@@ -16,9 +16,6 @@ export const customers = sqliteTable("customers", {
     healthInsurancePhone: text("health_insurance_phone"),
     healthInsuranceEmail: text("health_insurance_email"),
     careLevel: text("care_level"), // 1-5
-    relativeName: text("relative_name"),
-    relativePhone: text("relative_phone"),
-    relativeEmail: text("relative_email"),
     email: text("email"),
     notes: text("notes"),
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
