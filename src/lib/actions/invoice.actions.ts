@@ -8,6 +8,21 @@ import { revalidatePath } from "next/cache";
 export async function createInvoice(data: NewInvoice) {
     try {
         await db.insert(invoices).values(data);
+
+        // Trigger webhook
+        try {
+            await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            });
+        } catch (webhookError) {
+            console.error("Error calling webhook:", webhookError);
+            // We don't want to fail the invoice creation if the webhook fails
+        }
+
         revalidatePath("/invoices");
         return { success: true };
     } catch (error) {

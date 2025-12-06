@@ -9,7 +9,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 
@@ -74,7 +74,12 @@ export default async function InvoicesPage() {
                                             }>
                                                 {invoice.status === "sent" ? "Versendet" :
                                                     invoice.status === "processing" ? "In Bearbeitung" :
-                                                        invoice.status === "in_delivery" ? "In Zustellung" :
+                                                        invoice.status === "in_delivery" ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                                In Zustellung
+                                                            </div>
+                                                        ) :
                                                             invoice.status === "aborted" ? "Abgebrochen" : invoice.status}
                                             </Badge>
                                         </TableCell>
