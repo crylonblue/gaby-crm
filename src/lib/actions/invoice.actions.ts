@@ -13,10 +13,6 @@ export async function createInvoice(data: NewInvoice) {
         try {
             await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
                 method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data),
             });
         } catch (webhookError) {
             console.error("Error calling webhook:", webhookError);
