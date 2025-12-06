@@ -74,6 +74,10 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 insuranceNumber: selectedCustomer.insuranceNumber || "",
                 birthDate: selectedCustomer.birthDate || "",
                 careLevel: selectedCustomer.careLevel || "",
+                street: selectedCustomer.street || "",
+                houseNumber: selectedCustomer.houseNumber || "",
+                postalCode: selectedCustomer.postalCode || "",
+                city: selectedCustomer.city || "",
 
                 // Invoice Data
                 hours: data.hours,

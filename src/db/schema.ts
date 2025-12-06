@@ -38,6 +38,11 @@ export const invoices = sqliteTable("invoices", {
     birthDate: text("birth_date"),
     careLevel: text("care_level"),
 
+    street: text("street"),
+    houseNumber: text("house_number"),
+    postalCode: text("postal_code"),
+    city: text("city"),
+
     // Invoice Data
     hours: real("hours").notNull(), // Storing as number/real might be better if floating point needed? Drizzle sqlite integer mode number is usually int. 
     // SQLite stores numbers as REAL or INTEGER. Drizzle 'integer' with mode 'number' handles JS numbers.
