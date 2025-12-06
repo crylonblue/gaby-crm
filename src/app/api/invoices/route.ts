@@ -1,20 +1,33 @@
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
 
     try {
-        let query = db.select().from(invoices).orderBy(desc(invoices.date));
+        let conditions = [];
 
         if (status) {
-            // @ts-ignore - drizzle type for where might complain if status is arbitrary string but it's safe for sqlite text column
-            // and we want exact match.
-            query = db.select().from(invoices).where(eq(invoices.status, status)).orderBy(desc(invoices.date));
+            conditions.push(eq(invoices.status, status));
         }
+
+        if (from) {
+            // Compare date string YYYY-MM-DD
+            conditions.push(gte(invoices.date, from));
+        }
+
+        if (to) {
+            // Compare date string YYYY-MM-DD
+            conditions.push(lte(invoices.date, to));
+        }
+
+        // @ts-ignore
+        const query = db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.date));
 
         const data = await query;
         return NextResponse.json(data);

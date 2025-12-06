@@ -29,13 +29,13 @@ export default async function InvoicesPage() {
                 </Button>
             </div>
 
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Datum</TableHead>
                             <TableHead>Kunde</TableHead>
-                            <TableHead>Beschreibung</TableHead>
+                            <TableHead>Rechnungs-Nr.</TableHead>
                             <TableHead className="text-right">Betrag</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="w-[100px]"></TableHead>
@@ -61,7 +61,7 @@ export default async function InvoicesPage() {
                                             {invoice.lastName}, {invoice.firstName}
                                         </TableCell>
                                         <TableCell className="max-w-[200px] truncate">
-                                            {invoice.description}
+                                            {invoice.invoiceNumber}
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
                                             {amount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
