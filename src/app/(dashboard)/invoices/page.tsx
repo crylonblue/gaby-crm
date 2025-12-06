@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Plus, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
+import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,8 @@ export default async function InvoicesPage() {
                 </Button>
             </div>
 
-            <div className="rounded-md border overflow-x-auto">
+            {/* Desktop View */}
+            <div className="hidden md:block rounded-md border overflow-x-auto w-full">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -104,6 +106,11 @@ export default async function InvoicesPage() {
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden">
+                <MobileInvoiceList invoices={invoices} />
             </div>
         </div>
     );

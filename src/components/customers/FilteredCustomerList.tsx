@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { CustomerRow } from "@/components/customers/CustomerRow";
-import { Search } from "lucide-react";
+
+import { Search, Phone, MapPin } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface FilteredCustomerListProps {
     customers: Customer[];
@@ -41,7 +45,8 @@ export function FilteredCustomerList({ customers }: FilteredCustomerListProps) {
                 />
             </div>
 
-            <div className="rounded-md border overflow-x-auto">
+            {/* Desktop View */}
+            <div className="hidden md:block rounded-md border overflow-x-auto w-full">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -66,6 +71,49 @@ export function FilteredCustomerList({ customers }: FilteredCustomerListProps) {
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="grid gap-4 md:hidden">
+                {filteredCustomers.length === 0 ? (
+                    <div className="text-center p-8 border rounded-md text-muted-foreground">
+                        {searchTerm ? "Keine Kunden gefunden." : "Keine Kunden vorhanden."}
+                    </div>
+                ) : (
+                    filteredCustomers.map((customer) => (
+                        <Card key={customer.id}>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base font-medium">
+                                    {customer.lastName}, {customer.firstName}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {(customer.street || customer.city) && (
+                                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                                        <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                                        <span>
+                                            {customer.street} {customer.houseNumber}<br />
+                                            {customer.postalCode} {customer.city}
+                                        </span>
+                                    </div>
+                                )}
+                                {(customer.mobilePhone || customer.landlinePhone) && (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Phone className="h-4 w-4 shrink-0" />
+                                        <span>
+                                            {customer.mobilePhone || customer.landlinePhone}
+                                        </span>
+                                    </div>
+                                )}
+                                <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                                    <Link href={`/customers/${customer.id}`}>
+                                        Details anzeigen
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
         </div>
     );

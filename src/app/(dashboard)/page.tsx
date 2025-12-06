@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { UserPlus, FileText, Users, ArrowRight } from "lucide-react";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { TurnoverCard } from "@/components/dashboard/TurnoverCard";
 
 export default function Home() {
   return (
@@ -12,6 +13,9 @@ export default function Home() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        {/* Turnover Card */}
+        <TurnoverCard />
+
         {/* Quick Action: Add Customer */}
         <Card>
           <CardHeader>

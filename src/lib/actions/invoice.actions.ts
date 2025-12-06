@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { invoices, NewInvoice } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, gte, lte, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createInvoice(data: NewInvoice) {
@@ -57,6 +57,36 @@ export async function getInvoiceCountForCustomer(customerId: number) {
         return result.length;
     } catch (error) {
         console.error("Error counting invoices:", error);
+        return 0;
+    }
+}
+
+export async function getMonthlyTurnover() {
+    try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        // End of month
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
+        const monthlyInvoices = await db.select().from(invoices)
+            .where(
+                and(
+                    gte(invoices.date, startOfMonth),
+                    lte(invoices.date, endOfMonth),
+                    // Optionally filter status? "sum of ALL invoices". 
+                    // Usually we don't count "aborted".
+                    ne(invoices.status, "aborted")
+                )
+            );
+
+        const totalTurnover = monthlyInvoices.reduce((acc, invoice) => {
+            const amount = ((invoice.hours * invoice.ratePerHour) + (invoice.km * invoice.ratePerKm)) * 1.19;
+            return acc + amount;
+        }, 0);
+
+        return totalTurnover;
+    } catch (error) {
+        console.error("Error calculating turnover:", error);
         return 0;
     }
 }
