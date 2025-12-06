@@ -73,7 +73,12 @@ export default async function InvoicesPage() {
                                                         invoice.status === "aborted" ? "destructive" : "outline"
                                             }>
                                                 {invoice.status === "sent" ? "Versendet" :
-                                                    invoice.status === "processing" ? "In Bearbeitung" :
+                                                    invoice.status === "processing" ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                            In Bearbeitung
+                                                        </div>
+                                                    ) :
                                                         invoice.status === "in_delivery" ? (
                                                             <div className="flex items-center gap-1">
                                                                 <Loader2 className="h-3 w-3 animate-spin" />
