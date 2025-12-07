@@ -112,7 +112,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                             <div>
                                 <span className="text-sm text-muted-foreground block mb-1">Pflegegrad</span>
                                 <Badge variant="secondary" className="text-lg px-3 py-1">
-                                    Klasse {customer.careLevel}
+                                    Pflegegrad {customer.careLevel}
                                 </Badge>
                             </div>
                         )}

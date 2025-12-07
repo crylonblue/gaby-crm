@@ -134,19 +134,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="careLevel"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Pflegestufe</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="1-5" {...field} value={field.value || ''} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+
                     <FormField
                         control={form.control}
                         name="lastName"
