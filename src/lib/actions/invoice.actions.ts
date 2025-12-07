@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { invoices, NewInvoice, customerBudgets } from "@/db/schema";
-import { desc, eq, and, gte, lte, ne, sql } from "drizzle-orm";
+import { desc, eq, and, gte, lte, ne, sql, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createInvoice(data: NewInvoice) {
@@ -106,17 +106,16 @@ export async function getInvoiceCountForCustomer(customerId: number) {
 export async function getMonthlyTurnover() {
     try {
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        // End of month
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+        // Use Berlin time to determine the "current month" for the business
+        const berlinDate = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+        const year = berlinDate.getFullYear();
+        const month = String(berlinDate.getMonth() + 1).padStart(2, '0');
+        const pattern = `${year}-${month}%`;
 
         const monthlyInvoices = await db.select().from(invoices)
             .where(
                 and(
-                    gte(invoices.date, startOfMonth),
-                    lte(invoices.date, endOfMonth),
-                    // Optionally filter status? "sum of ALL invoices". 
-                    // Usually we don't count "aborted".
+                    like(invoices.date, pattern),
                     ne(invoices.status, "aborted")
                 )
             );

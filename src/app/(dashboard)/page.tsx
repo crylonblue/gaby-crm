@@ -4,6 +4,8 @@ import { UserPlus, FileText, Users, ArrowRight } from "lucide-react";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { TurnoverCard } from "@/components/dashboard/TurnoverCard";
 
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   return (
     <div className="space-y-8">
