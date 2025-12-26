@@ -45,6 +45,18 @@ const invoiceSchema = z.object({
     ratePerHour: z.coerce.number().min(0, "Preis muss positiv sein").default(47.0),
     ratePerKm: z.coerce.number().min(0, "Preis muss positiv sein").default(0.30),
     attachAbtretungserklaerung: z.boolean().optional(),
+    sendEmailAutomatically: z.boolean().default(true),
+    useInsuranceEmail: z.boolean().default(true),
+    customEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
+}).refine((data) => {
+    // If sendEmailAutomatically is true and useInsuranceEmail is false, customEmail is required
+    if (data.sendEmailAutomatically && !data.useInsuranceEmail) {
+        return data.customEmail && data.customEmail.length > 0;
+    }
+    return true;
+}, {
+    message: "Bitte geben Sie eine E-Mail-Adresse ein",
+    path: ["customEmail"],
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -70,10 +82,15 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
             ratePerHour: 47.0,
             ratePerKm: 0.30,
             attachAbtretungserklaerung: false,
+            sendEmailAutomatically: true,
+            useInsuranceEmail: true,
+            customEmail: "",
         },
     });
 
     const selectedCustomerId = form.watch("customerId");
+    const sendEmailAutomatically = form.watch("sendEmailAutomatically");
+    const useInsuranceEmail = form.watch("useInsuranceEmail");
 
     useEffect(() => {
         const checkFirstInvoice = async () => {
@@ -123,6 +140,16 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 return;
             }
 
+            // Determine the email to use
+            let invoiceEmail = "";
+            if (data.sendEmailAutomatically) {
+                if (data.useInsuranceEmail) {
+                    invoiceEmail = selectedCustomer.healthInsuranceEmail || "";
+                } else {
+                    invoiceEmail = data.customEmail || "";
+                }
+            }
+
             const invoiceData = {
                 customerId: selectedCustomer.id,
                 status: "processing", // Initial status
@@ -140,7 +167,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 houseNumber: selectedCustomer.houseNumber || "",
                 postalCode: selectedCustomer.postalCode || "",
                 city: selectedCustomer.city || "",
-                invoiceEmail: selectedCustomer.healthInsuranceEmail || "",
+                invoiceEmail: invoiceEmail,
 
                 // Invoice Data
                 hours: data.hours,
@@ -151,6 +178,9 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
 
                 // Abtretungserklärung
                 abtretungserklaerungUrl: data.attachAbtretungserklaerung ? selectedCustomer.abtretungserklaerungUrl : null,
+
+                // Email sending options
+                sendEmailAutomatically: data.sendEmailAutomatically,
             };
 
             // @ts-ignore
@@ -333,6 +363,79 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                         )}
                     />
                 )}
+
+                {/* Email sending options */}
+                <div className="space-y-4 rounded-md border p-4">
+                    <FormField
+                        control={form.control}
+                        name="sendEmailAutomatically"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        E-Mail automatisch versenden
+                                    </FormLabel>
+                                    <p className="text-sm text-muted-foreground">
+                                        Rechnung wird automatisch per E-Mail an die Versicherung gesendet.
+                                    </p>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+
+                    {sendEmailAutomatically && (
+                        <>
+                            <FormField
+                                control={form.control}
+                                name="useInsuranceEmail"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                            <FormLabel>
+                                                Versicherungs-E-Mail verwenden
+                                            </FormLabel>
+                                            <p className="text-sm text-muted-foreground">
+                                                Verwendet die hinterlegte E-Mail-Adresse der Versicherung.
+                                            </p>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {!useInsuranceEmail && (
+                                <FormField
+                                    control={form.control}
+                                    name="customEmail"
+                                    render={({ field }) => (
+                                        <FormItem className="ml-7">
+                                            <FormLabel>E-Mail-Adresse</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="email"
+                                                    placeholder="email@example.com"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+                        </>
+                    )}
+                </div>
 
                 <div className="flex items-center gap-4">
                     <Button type="button" variant="outline" onClick={() => router.push("/invoices")}>

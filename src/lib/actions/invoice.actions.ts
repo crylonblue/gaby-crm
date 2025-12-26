@@ -5,7 +5,12 @@ import { invoices, NewInvoice, customerBudgets } from "@/db/schema";
 import { desc, eq, and, gte, lte, ne, sql, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function createInvoice(data: NewInvoice) {
+// Extend NewInvoice type to include email sending option
+type CreateInvoiceData = NewInvoice & {
+    sendEmailAutomatically?: boolean;
+};
+
+export async function createInvoice(data: CreateInvoiceData) {
     try {
         await db.insert(invoices).values(data);
 
@@ -33,14 +38,16 @@ export async function createInvoice(data: NewInvoice) {
         }
 
 
-        // Trigger webhook
-        try {
-            await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
-                method: "GET",
-            });
-        } catch (webhookError) {
-            console.error("Error calling webhook:", webhookError);
-            // We don't want to fail the invoice creation if the webhook fails
+        // Trigger webhook only if email should be sent automatically
+        if (data.sendEmailAutomatically !== false) {
+            try {
+                await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
+                    method: "GET",
+                });
+            } catch (webhookError) {
+                console.error("Error calling webhook:", webhookError);
+                // We don't want to fail the invoice creation if the webhook fails
+            }
         }
 
         revalidatePath("/invoices");
