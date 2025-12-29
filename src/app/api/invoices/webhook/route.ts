@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         } else if (action === "invoice_creation_finished") {
             await db.update(invoices)
-                .set({ status: "sent", invoiceNumber })
+                .set({ status: "sent", invoiceNumber, invoicePdfUrl: url })
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent (creation finished)" });
