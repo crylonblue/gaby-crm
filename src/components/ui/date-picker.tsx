@@ -250,7 +250,7 @@ export function DatePicker({ field, placeholder = "Datum auswählen", disabled }
             onMonthChange={handleMonthChange}
             initialFocus
             locale={deLocale}
-            captionLayout="dropdown-buttons"
+            captionLayout="dropdown"
             fromYear={1900}
             toYear={new Date().getFullYear()}
           />
