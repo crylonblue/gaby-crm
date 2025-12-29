@@ -63,6 +63,7 @@ export const invoices = sqliteTable("invoices", {
     invoicePdfUrl: text("invoice_pdf_url"), // URL provided by worker
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
     sendEmailAutomatically: integer("send_email_automatically", { mode: "boolean" }).notNull().default(true), // Whether to send email automatically
+    paid: integer("paid", { mode: "boolean" }).notNull().default(false), // Whether the invoice has been paid
 });
 
 export const customerBudgets = sqliteTable("customer_budgets", {

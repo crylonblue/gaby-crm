@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
 
         } else if (action === "invoice_sent") {
             await db.update(invoices)
-                .set({ status: "sent" })
+                .set({ status: "sent", invoiceNumber })
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent" });
 
         } else if (action === "invoice_creation_finished") {
             await db.update(invoices)
-                .set({ status: "sent" })
+                .set({ status: "sent", invoiceNumber })
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent (creation finished)" });

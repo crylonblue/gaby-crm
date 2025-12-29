@@ -108,9 +108,13 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
             const count = await getInvoiceCountForCustomer(customer.id);
             if (count === 0) {
                 setShowAbtretungserklaerung(true);
-                form.setValue("attachAbtretungserklaerung", true);
+                // Only set to true if sendEmailAutomatically is enabled
+                if (sendEmailAutomatically) {
+                    form.setValue("attachAbtretungserklaerung", true);
+                }
             } else {
-                setShowAbtretungserklaerung(false);
+                setShowAbtretungserklaerung(true);
+                form.setValue("attachAbtretungserklaerung", false);
             }
         };
 
@@ -118,7 +122,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
         if (customer?.abtretungserklaerungUrl) {
             setShowAbtretungserklaerung(true);
             getInvoiceCountForCustomer(customer.id).then(count => {
-                if (count === 0) {
+                if (count === 0 && sendEmailAutomatically) {
                     form.setValue("attachAbtretungserklaerung", true);
                 } else {
                     form.setValue("attachAbtretungserklaerung", false);
@@ -128,7 +132,14 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
             setShowAbtretungserklaerung(false);
         }
 
-    }, [selectedCustomerId, customers, form]);
+    }, [selectedCustomerId, customers, form, sendEmailAutomatically]);
+
+    // Reset attachAbtretungserklaerung when sendEmailAutomatically is disabled
+    useEffect(() => {
+        if (!sendEmailAutomatically) {
+            form.setValue("attachAbtretungserklaerung", false);
+        }
+    }, [sendEmailAutomatically, form]);
 
 
     function onSubmit(data: InvoiceFormValues) {
@@ -339,31 +350,6 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                     )}
                 />
 
-                {showAbtretungserklaerung && (
-                    <FormField
-                        control={form.control}
-                        name="attachAbtretungserklaerung"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel>
-                                        Abtretungserklärung beifügen
-                                    </FormLabel>
-                                    <p className="text-sm text-muted-foreground">
-                                        Fügt die hinterlegte Abtretungserklärung zur Rechnung hinzu.
-                                    </p>
-                                </div>
-                            </FormItem>
-                        )}
-                    />
-                )}
-
                 {/* Email sending options */}
                 <div className="space-y-4 rounded-md border p-4">
                     <FormField
@@ -391,6 +377,31 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
 
                     {sendEmailAutomatically && (
                         <>
+                            {showAbtretungserklaerung && (
+                                <FormField
+                                    control={form.control}
+                                    name="attachAbtretungserklaerung"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                                <FormLabel>
+                                                    Abtretungserklärung beifügen
+                                                </FormLabel>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Fügt die hinterlegte Abtretungserklärung zur Rechnung hinzu.
+                                                </p>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+
                             <FormField
                                 control={form.control}
                                 name="useInsuranceEmail"

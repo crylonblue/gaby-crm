@@ -9,11 +9,12 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Plus, FileText, Loader2 } from "lucide-react";
+import { Plus, FileText, Loader2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
+import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
 
 export const dynamic = "force-dynamic";
 
@@ -74,12 +75,19 @@ export default async function InvoicesPage() {
                                             {amount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={
-                                                invoice.status === "sent" ? "default" :
-                                                    invoice.status === "processing" ? "secondary" :
-                                                        invoice.status === "aborted" ? "destructive" : "outline"
-                                            }>
-                                                {invoice.status === "sent" ? "Versendet" :
+                                            <Badge 
+                                                variant={invoice.paid ? "outline" : 
+                                                    invoice.status === "sent" ? "default" :
+                                                        invoice.status === "processing" ? "secondary" :
+                                                            invoice.status === "aborted" ? "destructive" : "outline"}
+                                                className={invoice.paid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
+                                            >
+                                                {invoice.paid ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <Check className="h-3 w-3" />
+                                                        Bezahlt
+                                                    </div>
+                                                ) : invoice.status === "sent" ? "Versendet" :
                                                     invoice.status === "processing" ? (
                                                         <div className="flex items-center gap-1">
                                                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -102,6 +110,9 @@ export default async function InvoicesPage() {
                                                         <FileText className="h-4 w-4 text-blue-600" />
                                                     </Link>
                                                 </Button>
+                                            )}
+                                            {invoice.status === "sent" && (
+                                                <TogglePaidButton invoiceId={invoice.id} paid={invoice.paid ?? false} />
                                             )}
                                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                                         </TableCell>

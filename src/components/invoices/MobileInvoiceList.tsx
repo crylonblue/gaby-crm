@@ -4,9 +4,10 @@ import { Invoice } from "@/db/schema";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, Check } from "lucide-react";
 import Link from "next/link";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
+import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
 
 interface MobileInvoiceListProps {
     invoices: Invoice[];
@@ -33,12 +34,19 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                 <CardTitle className="text-base font-medium">
                                     {invoice.lastName}, {invoice.firstName}
                                 </CardTitle>
-                                <Badge variant={
-                                    invoice.status === "sent" ? "default" :
-                                        invoice.status === "processing" ? "secondary" :
-                                            invoice.status === "aborted" ? "destructive" : "outline"
-                                }>
-                                    {invoice.status === "sent" ? "Versendet" :
+                                <Badge 
+                                    variant={invoice.paid ? "outline" :
+                                        invoice.status === "sent" ? "default" :
+                                            invoice.status === "processing" ? "secondary" :
+                                                invoice.status === "aborted" ? "destructive" : "outline"}
+                                    className={invoice.paid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
+                                >
+                                    {invoice.paid ? (
+                                        <div className="flex items-center gap-1">
+                                            <Check className="h-3 w-3" />
+                                            Bezahlt
+                                        </div>
+                                    ) : invoice.status === "sent" ? "Versendet" :
                                         invoice.status === "processing" ? (
                                             <div className="flex items-center gap-1">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -70,6 +78,9 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                         <FileText className="h-4 w-4 mr-2" /> PDF
                                     </Link>
                                 </Button>
+                            )}
+                            {invoice.status === "sent" && (
+                                <TogglePaidButton invoiceId={invoice.id} paid={invoice.paid ?? false} />
                             )}
                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                         </CardFooter>

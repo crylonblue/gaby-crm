@@ -107,6 +107,33 @@ export async function getInvoiceCountForCustomer(customerId: number) {
     }
 }
 
+export async function toggleInvoicePaid(id: number) {
+    try {
+        // Get current paid status
+        const invoice = await db.select({ paid: invoices.paid })
+            .from(invoices)
+            .where(eq(invoices.id, id))
+            .limit(1);
+
+        if (invoice.length === 0) {
+            return { success: false, error: "Rechnung nicht gefunden" };
+        }
+
+        // Toggle paid status
+        const newPaidStatus = !invoice[0].paid;
+
+        await db.update(invoices)
+            .set({ paid: newPaidStatus })
+            .where(eq(invoices.id, id));
+
+        revalidatePath("/invoices");
+        return { success: true, paid: newPaidStatus };
+    } catch (error) {
+        console.error("Error toggling invoice paid status:", error);
+        return { success: false, error: "Fehler beim Aktualisieren der Rechnung" };
+    }
+}
+
 export async function getMonthlyTurnover() {
     try {
         const now = new Date();
