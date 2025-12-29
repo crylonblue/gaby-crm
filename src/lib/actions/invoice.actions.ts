@@ -38,17 +38,13 @@ export async function createInvoice(data: NewInvoice) {
             });
         }
 
-
-        // Trigger webhook only if email should be sent automatically
-        if (invoiceData.sendEmailAutomatically !== false) {
-            try {
-                await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
-                    method: "GET",
-                });
-            } catch (webhookError) {
-                console.error("Error calling webhook:", webhookError);
-                // We don't want to fail the invoice creation if the webhook fails
-            }
+        try {
+            await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
+                method: "GET",
+            });
+        } catch (webhookError) {
+            console.error("Error calling webhook:", webhookError);
+            // We don't want to fail the invoice creation if the webhook fails
         }
 
         revalidatePath("/invoices");
