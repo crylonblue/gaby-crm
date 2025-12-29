@@ -5,14 +5,15 @@ import { invoices, NewInvoice, customerBudgets } from "@/db/schema";
 import { desc, eq, and, gte, lte, ne, sql, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// Extend NewInvoice type to include email sending option
-type CreateInvoiceData = NewInvoice & {
-    sendEmailAutomatically?: boolean;
-};
-
-export async function createInvoice(data: CreateInvoiceData) {
+export async function createInvoice(data: NewInvoice) {
     try {
-        await db.insert(invoices).values(data);
+        // Ensure sendEmailAutomatically defaults to true if not provided
+        const invoiceData = {
+            ...data,
+            sendEmailAutomatically: data.sendEmailAutomatically ?? true,
+        };
+        
+        await db.insert(invoices).values(invoiceData);
 
         // Update Customer Budget
         const amount = ((data.hours * (data.ratePerHour ?? 0)) + ((data.km ?? 0) * (data.ratePerKm ?? 0))) * 1.19;
@@ -39,7 +40,7 @@ export async function createInvoice(data: CreateInvoiceData) {
 
 
         // Trigger webhook only if email should be sent automatically
-        if (data.sendEmailAutomatically !== false) {
+        if (invoiceData.sendEmailAutomatically !== false) {
             try {
                 await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
                     method: "GET",

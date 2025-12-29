@@ -10,6 +10,7 @@ import { importCustomers } from "@/lib/actions/customer.actions";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import { NewCustomer } from "@/db/schema";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 
 export default function ImportPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -104,6 +105,11 @@ export default function ImportPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
+            <BreadcrumbNav items={[
+                { label: "Dashboard", href: "/" },
+                { label: "Kunden", href: "/customers" },
+                { label: "Import" }
+            ]} />
             <h1 className="text-3xl font-bold">Kunden Import</h1>
 
             <Card>

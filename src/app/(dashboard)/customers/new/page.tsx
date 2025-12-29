@@ -1,8 +1,14 @@
 import { CustomerForm } from "@/components/customers/CustomerForm";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 
 export default function NewCustomerPage() {
     return (
         <div className="max-w-2xl mx-auto space-y-6">
+            <BreadcrumbNav items={[
+                { label: "Dashboard", href: "/" },
+                { label: "Kunden", href: "/customers" },
+                { label: "Neuer Kunde" }
+            ]} />
             <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Kunde hinzufügen</h1>
                 <p className="text-muted-foreground">Erstellen Sie einen neuen Kundendatensatz.</p>

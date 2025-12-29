@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { uploadFile } from "@/lib/actions/upload.actions";
 import { useState } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const customerSchema = z.object({
     lastName: z.string().min(1, "Nachname ist erforderlich"),
@@ -171,7 +172,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                         <FormItem>
                             <FormLabel>Geburtsdatum</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} />
+                                <DatePicker field={field} placeholder="Geburtsdatum auswählen" />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

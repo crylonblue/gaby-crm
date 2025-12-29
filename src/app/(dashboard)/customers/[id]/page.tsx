@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { Edit, Phone, Mail, MapPin, ArrowLeft, Calendar, FileText, HeartPulse, User, Euro } from "lucide-react";
+import { Edit, Phone, Mail, MapPin, Calendar, FileText, HeartPulse, User, Euro } from "lucide-react";
 import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 import { Badge } from "@/components/ui/badge";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -17,12 +18,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
+            <BreadcrumbNav items={[
+                { label: "Dashboard", href: "/" },
+                { label: "Kunden", href: "/customers" },
+                { label: `${customer.lastName}, ${customer.firstName}` }
+            ]} />
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild>
-                    <Link href="/customers">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Link>
-                </Button>
                 <div className="flex-1">
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
                         {customer.lastName}, {customer.firstName}

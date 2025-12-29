@@ -13,6 +13,7 @@ import { Plus, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,10 @@ export default async function InvoicesPage() {
 
     return (
         <div className="space-y-6">
+            <BreadcrumbNav items={[
+                { label: "Dashboard", href: "/" },
+                { label: "Rechnungen" }
+            ]} />
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Rechnungen</h1>
                 <Button asChild>

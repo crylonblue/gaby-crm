@@ -62,6 +62,7 @@ export const invoices = sqliteTable("invoices", {
     createdAt: text("created_at").notNull(), // ISO String
     invoicePdfUrl: text("invoice_pdf_url"), // URL provided by worker
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
+    sendEmailAutomatically: integer("send_email_automatically", { mode: "boolean" }).notNull().default(true), // Whether to send email automatically
 });
 
 export const customerBudgets = sqliteTable("customer_budgets", {

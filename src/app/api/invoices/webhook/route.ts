@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing required fields: id, action" }, { status: 400 });
         }
 
-        if (action === "invoice_generated") {
+        if (action === "invoice_ready_for_delivery") {
             if (!invoiceNumber || !url) {
-                return NextResponse.json({ error: "Missing fields for invoice_generated: invoiceNumber, url" }, { status: 400 });
+                return NextResponse.json({ error: "Missing fields for invoice_ready_for_delivery: invoiceNumber, url" }, { status: 400 });
             }
 
             await db.update(invoices)
@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent" });
+
+        } else if (action === "invoice_creation_finished") {
+            await db.update(invoices)
+                .set({ status: "sent" })
+                .where(eq(invoices.id, id));
+
+            return NextResponse.json({ success: true, message: "Invoice updated to sent (creation finished)" });
 
         } else {
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });
