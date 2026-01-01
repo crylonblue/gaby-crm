@@ -405,45 +405,78 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                             <FormField
                                 control={form.control}
                                 name="useInsuranceEmail"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
-                                        <FormControl>
-                                            <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                        <div className="space-y-1 leading-none">
-                                            <FormLabel>
-                                                Versicherungs-E-Mail verwenden
-                                            </FormLabel>
-                                            <p className="text-sm text-muted-foreground">
-                                                Verwendet die hinterlegte E-Mail-Adresse der Versicherung.
-                                            </p>
-                                        </div>
-                                    </FormItem>
-                                )}
+                                render={({ field }) => {
+                                    const selectedCustomer = customers.find(c => c.id.toString() === selectedCustomerId);
+                                    const insuranceEmail = selectedCustomer?.healthInsuranceEmail || "";
+
+                                    return (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={(checked) => {
+                                                        field.onChange(checked);
+                                                        if (checked) {
+                                                            // When checked, set insurance email and disable input
+                                                            form.setValue("customEmail", insuranceEmail);
+                                                        } else {
+                                                            // When unchecked, clear email
+                                                            form.setValue("customEmail", "");
+                                                        }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                                <FormLabel>
+                                                    Versicherungs-E-Mail verwenden
+                                                </FormLabel>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Verwendet die hinterlegte E-Mail-Adresse der Versicherung.
+                                                </p>
+                                            </div>
+                                        </FormItem>
+                                    );
+                                }}
                             />
 
-                            {!useInsuranceEmail && (
-                                <FormField
-                                    control={form.control}
-                                    name="customEmail"
-                                    render={({ field }) => (
+                            <FormField
+                                control={form.control}
+                                name="customEmail"
+                                render={({ field }) => {
+                                    const selectedCustomer = customers.find(c => c.id.toString() === selectedCustomerId);
+                                    const insuranceEmail = selectedCustomer?.healthInsuranceEmail || "";
+                                    
+                                    // Update field value when useInsuranceEmail or insuranceEmail changes
+                                    useEffect(() => {
+                                        if (useInsuranceEmail && insuranceEmail) {
+                                            field.onChange(insuranceEmail);
+                                        } else if (!useInsuranceEmail && field.value === insuranceEmail) {
+                                            // Clear if unchecked and value was the insurance email
+                                            field.onChange("");
+                                        }
+                                    }, [useInsuranceEmail, insuranceEmail, selectedCustomerId]);
+
+                                    return (
                                         <FormItem className="ml-7">
                                             <FormLabel>E-Mail-Adresse</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     type="email"
-                                                    placeholder="email@example.com"
-                                                    {...field}
+                                                    placeholder={useInsuranceEmail ? insuranceEmail : "email@example.com"}
+                                                    disabled={useInsuranceEmail}
+                                                    value={useInsuranceEmail ? insuranceEmail : field.value || ""}
+                                                    onChange={(e) => {
+                                                        if (!useInsuranceEmail) {
+                                                            field.onChange(e.target.value);
+                                                        }
+                                                    }}
                                                 />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )}
-                                />
-                            )}
+                                    );
+                                }}
+                            />
                         </>
                     )}
                 </div>
