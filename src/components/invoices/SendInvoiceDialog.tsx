@@ -138,7 +138,7 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
                                 <Checkbox
                                     id="attachAbtretungserklaerung"
                                     checked={attachAbtretungserklaerung}
-                                    onCheckedChange={setAttachAbtretungserklaerung}
+                                    onCheckedChange={(checked) => setAttachAbtretungserklaerung(checked === true)}
                                 />
                                 <Label htmlFor="attachAbtretungserklaerung" className="font-normal cursor-pointer">
                                     Abtretungserklärung beifügen
