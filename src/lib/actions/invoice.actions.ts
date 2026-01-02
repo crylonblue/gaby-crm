@@ -201,7 +201,7 @@ export async function sendInvoice(data: { invoiceId: number; email: string; atta
 
         // Call webhook after updating database
         try {
-            await fetch("https://api.sexy/webhook/df4fb98a-3f0a-4db1-8e3d-65aa4f71310c", {
+            await fetch("https://api.sexy/webhook/560f454e-034f-4c1f-b948-3b682fd8ca77", {
                 method: "GET",
             });
         } catch (webhookError) {
