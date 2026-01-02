@@ -161,9 +161,12 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 }
             }
 
+            // Determine initial status based on email sending preference
+            const initialStatus = data.sendEmailAutomatically ? "processing" : "created";
+
             const invoiceData = {
                 customerId: selectedCustomer.id,
-                status: "processing", // Initial status
+                status: initialStatus,
                 date: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
 

@@ -12,6 +12,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing required fields: id, action" }, { status: 400 });
         }
 
+        // Get current invoice to preserve "_paid" suffix
+        const currentInvoice = await db.select({ status: invoices.status })
+            .from(invoices)
+            .where(eq(invoices.id, id))
+            .limit(1);
+
+        if (currentInvoice.length === 0) {
+            return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+        }
+
+        const currentStatus = currentInvoice[0].status || "";
+        const isPaid = currentStatus.endsWith("_paid");
+        const paidSuffix = isPaid ? "_paid" : "";
+
         if (action === "invoice_ready_for_delivery") {
             if (!invoiceNumber || !url) {
                 return NextResponse.json({ error: "Missing fields for invoice_ready_for_delivery: invoiceNumber, url" }, { status: 400 });
@@ -21,7 +35,7 @@ export async function POST(request: NextRequest) {
                 .set({
                     invoiceNumber,
                     invoicePdfUrl: url,
-                    status: "in_delivery"
+                    status: `in_delivery${paidSuffix}`
                 })
                 .where(eq(invoices.id, id));
 
@@ -29,14 +43,21 @@ export async function POST(request: NextRequest) {
 
         } else if (action === "invoice_sent") {
             await db.update(invoices)
-                .set({ status: "sent", invoiceNumber })
+                .set({ 
+                    status: `sent${paidSuffix}`, 
+                    invoiceNumber 
+                })
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent" });
 
         } else if (action === "invoice_creation_finished") {
             await db.update(invoices)
-                .set({ status: "sent", invoiceNumber, invoicePdfUrl: url })
+                .set({ 
+                    status: `sent${paidSuffix}`, 
+                    invoiceNumber, 
+                    invoicePdfUrl: url 
+                })
                 .where(eq(invoices.id, id));
 
             return NextResponse.json({ success: true, message: "Invoice updated to sent (creation finished)" });

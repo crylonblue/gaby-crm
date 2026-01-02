@@ -34,33 +34,73 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                 <CardTitle className="text-base font-medium">
                                     {invoice.lastName}, {invoice.firstName}
                                 </CardTitle>
-                                <Badge 
-                                    variant={invoice.paid ? "outline" :
-                                        invoice.status === "sent" ? "default" :
-                                            invoice.status === "processing" ? "secondary" :
-                                                invoice.status === "aborted" ? "destructive" : "outline"}
-                                    className={invoice.paid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
-                                >
-                                    {invoice.paid ? (
-                                        <div className="flex items-center gap-1">
-                                            <Check className="h-3 w-3" />
-                                            Bezahlt
-                                        </div>
-                                    ) : invoice.status === "sent" ? "Versendet" :
-                                        invoice.status === "processing" ? (
-                                            <div className="flex items-center gap-1">
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                In Bearb.
-                                            </div>
-                                        ) :
-                                            invoice.status === "in_delivery" ? (
+                                {(() => {
+                                    const status = invoice.status || "";
+                                    const isPaid = status.endsWith("_paid");
+                                    const baseStatus = isPaid ? status.replace(/_paid$/, "") : status;
+                                    
+                                    const getStatusDisplay = () => {
+                                        if (isPaid) {
+                                            return (
                                                 <div className="flex items-center gap-1">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    Zustellung
+                                                    <Check className="h-3 w-3" />
+                                                    Bezahlt
                                                 </div>
-                                            ) :
-                                                invoice.status === "aborted" ? "Abgebr." : invoice.status}
-                                </Badge>
+                                            );
+                                        }
+                                        
+                                        switch (baseStatus) {
+                                            case "created":
+                                                return "Erstellt";
+                                            case "processing":
+                                                return (
+                                                    <div className="flex items-center gap-1">
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                        In Bearb.
+                                                    </div>
+                                                );
+                                            case "in_delivery":
+                                                return (
+                                                    <div className="flex items-center gap-1">
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                        Zustellung
+                                                    </div>
+                                                );
+                                            case "sent":
+                                                return "Versendet";
+                                            case "aborted":
+                                                return "Abgebr.";
+                                            default:
+                                                return baseStatus;
+                                        }
+                                    };
+                                    
+                                    const getVariant = () => {
+                                        if (isPaid) return "outline";
+                                        switch (baseStatus) {
+                                            case "sent":
+                                                return "default";
+                                            case "processing":
+                                            case "in_delivery":
+                                                return "secondary";
+                                            case "aborted":
+                                                return "destructive";
+                                            case "created":
+                                                return "outline";
+                                            default:
+                                                return "outline";
+                                        }
+                                    };
+                                    
+                                    return (
+                                        <Badge 
+                                            variant={getVariant()}
+                                            className={isPaid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
+                                        >
+                                            {getStatusDisplay()}
+                                        </Badge>
+                                    );
+                                })()}
                             </div>
                             <div className="text-xs text-muted-foreground">
                                 {invoice.invoiceNumber || "Keine Nr."} • {new Date(invoice.date).toLocaleDateString("de-DE")}
@@ -79,9 +119,15 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                     </Link>
                                 </Button>
                             )}
-                            {invoice.status === "sent" && (
-                                <TogglePaidButton invoiceId={invoice.id} paid={invoice.paid ?? false} />
-                            )}
+                            {(() => {
+                                const status = invoice.status || "";
+                                const baseStatus = status.endsWith("_paid") ? status.replace(/_paid$/, "") : status;
+                                // Show toggle button for "sent" or "created" statuses
+                                if (baseStatus === "sent" || baseStatus === "created") {
+                                    return <TogglePaidButton invoiceId={invoice.id} paid={status.endsWith("_paid")} />;
+                                }
+                                return null;
+                            })()}
                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                         </CardFooter>
                     </Card>

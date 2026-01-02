@@ -38,13 +38,16 @@ export async function createInvoice(data: NewInvoice) {
             });
         }
 
-        try {
-            await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
-                method: "GET",
-            });
-        } catch (webhookError) {
-            console.error("Error calling webhook:", webhookError);
-            // We don't want to fail the invoice creation if the webhook fails
+        // Trigger webhook only if email should be sent automatically
+        if (invoiceData.sendEmailAutomatically) {
+            try {
+                await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
+                    method: "GET",
+                });
+            } catch (webhookError) {
+                console.error("Error calling webhook:", webhookError);
+                // We don't want to fail the invoice creation if the webhook fails
+            }
         }
 
         revalidatePath("/invoices");
@@ -109,8 +112,11 @@ export async function getInvoiceCountForCustomer(customerId: number) {
 
 export async function toggleInvoicePaid(id: number) {
     try {
-        // Get current paid status
-        const invoice = await db.select({ paid: invoices.paid })
+        // Get current invoice status and paid status
+        const invoice = await db.select({ 
+            paid: invoices.paid,
+            status: invoices.status 
+        })
             .from(invoices)
             .where(eq(invoices.id, id))
             .limit(1);
@@ -119,11 +125,29 @@ export async function toggleInvoicePaid(id: number) {
             return { success: false, error: "Rechnung nicht gefunden" };
         }
 
-        // Toggle paid status
-        const newPaidStatus = !invoice[0].paid;
+        const currentStatus = invoice[0].status || "";
+        const currentPaid = invoice[0].paid;
+        const newPaidStatus = !currentPaid;
+
+        // Update status to include or remove "_paid" suffix
+        let newStatus = currentStatus;
+        if (newPaidStatus) {
+            // Add "_paid" suffix if not already present
+            if (!currentStatus.endsWith("_paid")) {
+                newStatus = `${currentStatus}_paid`;
+            }
+        } else {
+            // Remove "_paid" suffix if present
+            if (currentStatus.endsWith("_paid")) {
+                newStatus = currentStatus.replace(/_paid$/, "");
+            }
+        }
 
         await db.update(invoices)
-            .set({ paid: newPaidStatus })
+            .set({ 
+                paid: newPaidStatus,
+                status: newStatus
+            })
             .where(eq(invoices.id, id));
 
         revalidatePath("/invoices");
