@@ -116,9 +116,6 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 km: data.km,
                 ratePerHour: data.ratePerHour,
                 ratePerKm: data.ratePerKm,
-
-                // Abtretungserklärung
-                abtretungserklaerungUrl: null,
             };
 
             // @ts-ignore

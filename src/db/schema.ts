@@ -64,6 +64,7 @@ export const invoices = sqliteTable("invoices", {
     invoicePdfUrl: text("invoice_pdf_url"), // URL provided by worker
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
     paid: integer("paid", { mode: "boolean" }).notNull().default(false), // Whether the invoice has been paid
+    queuedForSending: integer("queued_for_sending", { mode: "boolean" }).notNull().default(false), // Whether the invoice is queued for sending
 });
 
 export const customerBudgets = sqliteTable("customer_budgets", {

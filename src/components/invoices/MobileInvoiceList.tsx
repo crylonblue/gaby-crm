@@ -8,6 +8,7 @@ import { Eye, Check } from "lucide-react";
 import Link from "next/link";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
+import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
 import { getGoogleDriveViewerUrl } from "@/lib/utils";
 
 interface MobileInvoiceListProps {
@@ -56,8 +57,30 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                     );
                                 })()}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                                {invoice.invoiceNumber || "Keine Nr."} • {new Date(invoice.date).toLocaleDateString("de-DE")}
+                            <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                                <div>
+                                    <span className="font-medium">Rechnungsnummer:</span> {invoice.invoiceNumber || "Keine Nr."}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Erstellt am:</span> {new Date(invoice.createdAt).toLocaleDateString("de-DE", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric"
+                                    })}
+                                </div>
+                                {invoice.sentAt ? (
+                                    <div>
+                                        <span className="font-medium">Gesendet am:</span> {new Date(invoice.sentAt).toLocaleDateString("de-DE", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric"
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-muted-foreground/70">
+                                        <span className="font-medium">Gesendet am:</span> Noch nicht gesendet
+                                    </div>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className="pb-2">
@@ -77,6 +100,7 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                     </Link>
                                 </Button>
                             )}
+                            <SendInvoiceDialog invoiceId={invoice.id} customerId={invoice.customerId} />
                             <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                         </CardFooter>

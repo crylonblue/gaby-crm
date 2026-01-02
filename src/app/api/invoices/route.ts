@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const queued = searchParams.get("queued");
 
     try {
         let conditions = [];
@@ -24,6 +25,10 @@ export async function GET(request: NextRequest) {
         if (to) {
             // Compare date string YYYY-MM-DD
             conditions.push(lte(invoices.date, to));
+        }
+
+        if (queued === "true") {
+            conditions.push(eq(invoices.queuedForSending, true));
         }
 
         // @ts-ignore

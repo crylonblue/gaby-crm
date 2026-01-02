@@ -1,13 +1,31 @@
 "use server";
 
 import { db } from "@/db";
-import { invoices, NewInvoice, customerBudgets } from "@/db/schema";
+import { invoices, NewInvoice, customerBudgets, customers } from "@/db/schema";
 import { desc, eq, and, gte, lte, ne, sql, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createInvoice(data: NewInvoice) {
     try {
+        // Insert invoice
         await db.insert(invoices).values(data);
+
+        // Get the inserted invoice ID by querying with the unique data
+        // We use createdAt as it's unique and set at insertion time
+        const insertedInvoice = await db.select({ id: invoices.id })
+            .from(invoices)
+            .where(eq(invoices.createdAt, data.createdAt))
+            .orderBy(desc(invoices.id))
+            .limit(1);
+
+        const invoiceId = insertedInvoice[0]?.id;
+        
+        if (!invoiceId) {
+            console.error("Failed to get invoice ID after insertion");
+            throw new Error("Failed to get invoice ID after insertion");
+        }
+
+        console.log("Invoice created with ID:", invoiceId);
 
         // Update Customer Budget
         const amount = ((data.hours * (data.ratePerHour ?? 0)) + ((data.km ?? 0) * (data.ratePerKm ?? 0))) * 1.19;
@@ -30,6 +48,23 @@ export async function createInvoice(data: NewInvoice) {
                 year: year,
                 amount: amount,
             });
+        }
+
+        // Call webhook and wait for response
+        console.log("Calling webhook for invoice ID:", invoiceId);
+        try {
+            const webhookResponse = await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
+                method: "GET",
+            });
+            
+            if (!webhookResponse.ok) {
+                console.error("Webhook returned error status:", webhookResponse.status, webhookResponse.statusText);
+            } else {
+                console.log("Webhook called successfully");
+            }
+        } catch (webhookError) {
+            console.error("Error calling webhook:", webhookError);
+            // We don't want to fail the invoice creation if the webhook fails
         }
 
         revalidatePath("/invoices");
@@ -125,6 +160,60 @@ export async function toggleInvoicePaid(id: number) {
     } catch (error) {
         console.error("Error toggling invoice paid status:", error);
         return { success: false, error: "Fehler beim Aktualisieren der Rechnung" };
+    }
+}
+
+export async function sendInvoice(data: { invoiceId: number; email: string; attachAbtretungserklaerung: boolean }) {
+    try {
+        // Get the invoice to check if it exists
+        const invoice = await db.select().from(invoices).where(eq(invoices.id, data.invoiceId)).limit(1);
+        
+        if (invoice.length === 0) {
+            return { success: false, error: "Rechnung nicht gefunden" };
+        }
+
+        // Get customer to get abtretungserklaerung URL if needed
+        const customer = await db.select().from(customers).where(eq(customers.id, invoice[0].customerId)).limit(1);
+        const customerData = customer[0];
+
+        // Prepare update data
+        const updateData: {
+            queuedForSending: boolean;
+            invoiceEmail: string;
+            abtretungserklaerungUrl?: string | null;
+        } = {
+            queuedForSending: true,
+            invoiceEmail: data.email,
+        };
+
+        // Attach abtretungserklaerung URL if checkbox is checked and customer has one
+        if (data.attachAbtretungserklaerung && customerData?.abtretungserklaerungUrl) {
+            updateData.abtretungserklaerungUrl = customerData.abtretungserklaerungUrl;
+        } else if (!data.attachAbtretungserklaerung) {
+            // Clear it if checkbox is not checked
+            updateData.abtretungserklaerungUrl = null;
+        }
+
+        // Update invoice: set queuedForSending to true, update invoiceEmail, and optionally attach abtretungserklaerung
+        await db.update(invoices)
+            .set(updateData)
+            .where(eq(invoices.id, data.invoiceId));
+
+        // Call webhook after updating database
+        try {
+            await fetch("https://api.sexy/webhook/df4fb98a-3f0a-4db1-8e3d-65aa4f71310c", {
+                method: "GET",
+            });
+        } catch (webhookError) {
+            console.error("Error calling webhook:", webhookError);
+            // We don't want to fail the invoice sending if the webhook fails
+        }
+
+        revalidatePath("/invoices");
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending invoice:", error);
+        return { success: false, error: "Fehler beim Senden der Rechnung" };
     }
 }
 

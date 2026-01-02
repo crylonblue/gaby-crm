@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` ADD `queued_for_sending` integer DEFAULT false NOT NULL;

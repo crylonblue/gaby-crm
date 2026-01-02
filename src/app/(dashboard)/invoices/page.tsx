@@ -9,12 +9,13 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Plus, Eye, Check } from "lucide-react";
+import { Plus, Eye, Check, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
+import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
 import { getGoogleDriveViewerUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -47,13 +48,14 @@ export default async function InvoicesPage() {
                             <TableHead>Rechnungs-Nr.</TableHead>
                             <TableHead className="text-right">Betrag (Brutto)</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Gesendet am</TableHead>
                             <TableHead className="w-[100px]"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {invoices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                     Keine Rechnungen vorhanden.
                                 </TableCell>
                             </TableRow>
@@ -97,6 +99,17 @@ export default async function InvoicesPage() {
                                                 );
                                             })()}
                                         </TableCell>
+                                        <TableCell>
+                                            {invoice.sentAt ? (
+                                                new Date(invoice.sentAt).toLocaleDateString("de-DE", {
+                                                    day: "2-digit",
+                                                    month: "2-digit",
+                                                    year: "numeric"
+                                                })
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="flex justify-end gap-2">
                                             {invoice.invoicePdfUrl && (
                                                 <Button 
@@ -114,6 +127,7 @@ export default async function InvoicesPage() {
                                                     </Link>
                                                 </Button>
                                             )}
+                                            <SendInvoiceDialog invoiceId={invoice.id} customerId={invoice.customerId} />
                                             <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
                                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                                         </TableCell>

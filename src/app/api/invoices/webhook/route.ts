@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { id, invoiceNumber, url } = body;
+        const { id, invoiceNumber, url, queuedForSending, action } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing required field: id" }, { status: 400 });
@@ -33,18 +33,28 @@ export async function POST(request: NextRequest) {
             invoiceNumber?: string;
             invoicePdfUrl?: string;
             sentAt?: string;
+            queuedForSending?: boolean;
         } = {
             status: newStatus,
         };
 
-        if (invoiceNumber) {
+        if (invoiceNumber !== undefined) {
             updateData.invoiceNumber = invoiceNumber;
         }
 
-        if (url) {
+        if (url !== undefined) {
             updateData.invoicePdfUrl = url;
-            // If URL is provided, it means the invoice was sent
+        }
+
+        // Handle action: if action is "invoice_sent", set sentAt to current timestamp and remove from queue
+        if (action === "invoice_sent") {
             updateData.sentAt = new Date().toISOString();
+            updateData.queuedForSending = false;
+        }
+
+        // Allow explicit queuedForSending override only if action is not "invoice_sent"
+        if (queuedForSending !== undefined && action !== "invoice_sent") {
+            updateData.queuedForSending = queuedForSending === true || queuedForSending === "true";
         }
 
         await db.update(invoices)
