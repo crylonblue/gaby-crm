@@ -9,12 +9,13 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Plus, FileText, Loader2, Check } from "lucide-react";
+import { Plus, Eye, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
+import { getGoogleDriveViewerUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -76,90 +77,44 @@ export default async function InvoicesPage() {
                                         </TableCell>
                                         <TableCell>
                                             {(() => {
-                                                const status = invoice.status || "";
-                                                const isPaid = status.endsWith("_paid");
-                                                const baseStatus = isPaid ? status.replace(/_paid$/, "") : status;
+                                                const status = invoice.status || "offen";
+                                                const isPaid = status === "bezahlt";
                                                 
-                                                const getStatusDisplay = () => {
-                                                    if (isPaid) {
-                                                        return (
+                                                return (
+                                                    <Badge 
+                                                        variant={isPaid ? "outline" : "secondary"}
+                                                        className={isPaid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
+                                                    >
+                                                        {isPaid ? (
                                                             <div className="flex items-center gap-1">
                                                                 <Check className="h-3 w-3" />
                                                                 Bezahlt
                                                             </div>
-                                                        );
-                                                    }
-                                                    
-                                                    switch (baseStatus) {
-                                                        case "created":
-                                                            return "Erstellt";
-                                                        case "processing":
-                                                            return (
-                                                                <div className="flex items-center gap-1">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    In Bearbeitung
-                                                                </div>
-                                                            );
-                                                        case "in_delivery":
-                                                            return (
-                                                                <div className="flex items-center gap-1">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    In Zustellung
-                                                                </div>
-                                                            );
-                                                        case "sent":
-                                                            return "Versendet";
-                                                        case "aborted":
-                                                            return "Abgebrochen";
-                                                        default:
-                                                            return baseStatus;
-                                                    }
-                                                };
-                                                
-                                                const getVariant = () => {
-                                                    if (isPaid) return "outline";
-                                                    switch (baseStatus) {
-                                                        case "sent":
-                                                            return "default";
-                                                        case "processing":
-                                                        case "in_delivery":
-                                                            return "secondary";
-                                                        case "aborted":
-                                                            return "destructive";
-                                                        case "created":
-                                                            return "outline";
-                                                        default:
-                                                            return "outline";
-                                                    }
-                                                };
-                                                
-                                                return (
-                                                    <Badge 
-                                                        variant={getVariant()}
-                                                        className={isPaid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
-                                                    >
-                                                        {getStatusDisplay()}
+                                                        ) : (
+                                                            "Offen"
+                                                        )}
                                                     </Badge>
                                                 );
                                             })()}
                                         </TableCell>
                                         <TableCell className="flex justify-end gap-2">
                                             {invoice.invoicePdfUrl && (
-                                                <Button variant="ghost" size="icon" asChild>
-                                                    <Link href={invoice.invoicePdfUrl} target="_blank" rel="noopener noreferrer">
-                                                        <FileText className="h-4 w-4 text-blue-600" />
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    asChild
+                                                    title="Rechnung in Drive anzeigen"
+                                                >
+                                                    <Link 
+                                                        href={getGoogleDriveViewerUrl(invoice.invoicePdfUrl)} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-blue-600" />
                                                     </Link>
                                                 </Button>
                                             )}
-                                            {(() => {
-                                                const status = invoice.status || "";
-                                                const baseStatus = status.endsWith("_paid") ? status.replace(/_paid$/, "") : status;
-                                                // Show toggle button for "sent" or "created" statuses
-                                                if (baseStatus === "sent" || baseStatus === "created") {
-                                                    return <TogglePaidButton invoiceId={invoice.id} paid={status.endsWith("_paid")} />;
-                                                }
-                                                return null;
-                                            })()}
+                                            <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
                                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                                         </TableCell>
                                     </TableRow>

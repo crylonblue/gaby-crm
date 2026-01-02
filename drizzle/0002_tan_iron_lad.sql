@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` DROP COLUMN `send_email_automatically`;

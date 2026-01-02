@@ -6,13 +6,13 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { action, id, invoiceNumber, url } = body;
+        const { id, invoiceNumber, url } = body;
 
-        if (!id || !action) {
-            return NextResponse.json({ error: "Missing required fields: id, action" }, { status: 400 });
+        if (!id) {
+            return NextResponse.json({ error: "Missing required field: id" }, { status: 400 });
         }
 
-        // Get current invoice to preserve "_paid" suffix
+        // Get current invoice to preserve paid status
         const currentInvoice = await db.select({ status: invoices.status })
             .from(invoices)
             .where(eq(invoices.id, id))
@@ -22,49 +22,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
         }
 
-        const currentStatus = currentInvoice[0].status || "";
-        const isPaid = currentStatus.endsWith("_paid");
-        const paidSuffix = isPaid ? "_paid" : "";
+        const currentStatus = currentInvoice[0].status || "offen";
+        const isPaid = currentStatus === "bezahlt";
+        // Preserve paid status - if already paid, keep it as "bezahlt", otherwise set to "offen"
+        const newStatus = isPaid ? "bezahlt" : "offen";
 
-        if (action === "invoice_ready_for_delivery") {
-            if (!invoiceNumber || !url) {
-                return NextResponse.json({ error: "Missing fields for invoice_ready_for_delivery: invoiceNumber, url" }, { status: 400 });
-            }
+        // Update invoice with provided data
+        const updateData: {
+            status: string;
+            invoiceNumber?: string;
+            invoicePdfUrl?: string;
+            sentAt?: string;
+        } = {
+            status: newStatus,
+        };
 
-            await db.update(invoices)
-                .set({
-                    invoiceNumber,
-                    invoicePdfUrl: url,
-                    status: `in_delivery${paidSuffix}`
-                })
-                .where(eq(invoices.id, id));
-
-            return NextResponse.json({ success: true, message: "Invoice updated to in_delivery" });
-
-        } else if (action === "invoice_sent") {
-            await db.update(invoices)
-                .set({ 
-                    status: `sent${paidSuffix}`, 
-                    invoiceNumber 
-                })
-                .where(eq(invoices.id, id));
-
-            return NextResponse.json({ success: true, message: "Invoice updated to sent" });
-
-        } else if (action === "invoice_creation_finished") {
-            await db.update(invoices)
-                .set({ 
-                    status: `sent${paidSuffix}`, 
-                    invoiceNumber, 
-                    invoicePdfUrl: url 
-                })
-                .where(eq(invoices.id, id));
-
-            return NextResponse.json({ success: true, message: "Invoice updated to sent (creation finished)" });
-
-        } else {
-            return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+        if (invoiceNumber) {
+            updateData.invoiceNumber = invoiceNumber;
         }
+
+        if (url) {
+            updateData.invoicePdfUrl = url;
+            // If URL is provided, it means the invoice was sent
+            updateData.sentAt = new Date().toISOString();
+        }
+
+        await db.update(invoices)
+            .set(updateData)
+            .where(eq(invoices.id, id));
+
+        return NextResponse.json({ success: true, message: "Invoice updated" });
 
     } catch (error) {
         console.error("Webhook Error:", error);

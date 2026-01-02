@@ -7,13 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function createInvoice(data: NewInvoice) {
     try {
-        // Ensure sendEmailAutomatically defaults to true if not provided
-        const invoiceData = {
-            ...data,
-            sendEmailAutomatically: data.sendEmailAutomatically ?? true,
-        };
-        
-        await db.insert(invoices).values(invoiceData);
+        await db.insert(invoices).values(data);
 
         // Update Customer Budget
         const amount = ((data.hours * (data.ratePerHour ?? 0)) + ((data.km ?? 0) * (data.ratePerKm ?? 0))) * 1.19;
@@ -36,18 +30,6 @@ export async function createInvoice(data: NewInvoice) {
                 year: year,
                 amount: amount,
             });
-        }
-
-        // Trigger webhook only if email should be sent automatically
-        if (invoiceData.sendEmailAutomatically) {
-            try {
-                await fetch("https://api.sexy/webhook/9caeeaf5-fbac-46da-a231-ec93579880ea", {
-                    method: "GET",
-                });
-            } catch (webhookError) {
-                console.error("Error calling webhook:", webhookError);
-                // We don't want to fail the invoice creation if the webhook fails
-            }
         }
 
         revalidatePath("/invoices");
@@ -112,7 +94,7 @@ export async function getInvoiceCountForCustomer(customerId: number) {
 
 export async function toggleInvoicePaid(id: number) {
     try {
-        // Get current invoice status and paid status
+        // Get current invoice status
         const invoice = await db.select({ 
             paid: invoices.paid,
             status: invoices.status 
@@ -125,23 +107,11 @@ export async function toggleInvoicePaid(id: number) {
             return { success: false, error: "Rechnung nicht gefunden" };
         }
 
-        const currentStatus = invoice[0].status || "";
         const currentPaid = invoice[0].paid;
         const newPaidStatus = !currentPaid;
 
-        // Update status to include or remove "_paid" suffix
-        let newStatus = currentStatus;
-        if (newPaidStatus) {
-            // Add "_paid" suffix if not already present
-            if (!currentStatus.endsWith("_paid")) {
-                newStatus = `${currentStatus}_paid`;
-            }
-        } else {
-            // Remove "_paid" suffix if present
-            if (currentStatus.endsWith("_paid")) {
-                newStatus = currentStatus.replace(/_paid$/, "");
-            }
-        }
+        // Simple status: "offen" or "bezahlt"
+        const newStatus = newPaidStatus ? "bezahlt" : "offen";
 
         await db.update(invoices)
             .set({ 
@@ -168,12 +138,7 @@ export async function getMonthlyTurnover() {
         const pattern = `${year}-${month}%`;
 
         const monthlyInvoices = await db.select().from(invoices)
-            .where(
-                and(
-                    like(invoices.date, pattern),
-                    ne(invoices.status, "aborted")
-                )
-            );
+            .where(like(invoices.date, pattern));
 
         const totalTurnover = monthlyInvoices.reduce((acc, invoice) => {
             const amount = ((invoice.hours * invoice.ratePerHour) + (invoice.km * invoice.ratePerKm)) * 1.19;
