@@ -30,10 +30,10 @@ export function calculateInvoiceGrossAmount(invoice: Invoice | NewInvoice): numb
   }
   
   // Fallback to legacy hours/km calculation with 19% VAT
-  const hours = 'hours' in invoice ? invoice.hours : 0;
-  const ratePerHour = 'ratePerHour' in invoice ? invoice.ratePerHour : 0;
-  const km = 'km' in invoice ? invoice.km : 0;
-  const ratePerKm = 'ratePerKm' in invoice ? invoice.ratePerKm : 0;
+  const hours = ('hours' in invoice ? invoice.hours : 0) ?? 0;
+  const ratePerHour = ('ratePerHour' in invoice ? invoice.ratePerHour : 0) ?? 0;
+  const km = ('km' in invoice ? invoice.km : 0) ?? 0;
+  const ratePerKm = ('ratePerKm' in invoice ? invoice.ratePerKm : 0) ?? 0;
   
   return ((hours * ratePerHour) + (km * ratePerKm)) * 1.19;
 }

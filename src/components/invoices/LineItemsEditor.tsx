@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { UNITS, getUnitLabel } from "../../../lib/units";
 import { TemplateSelector } from "./TemplateSelector";
 import { TemplateModal } from "./TemplateModal";
-import { type Template } from "@/lib/actions/template.actions";
+import { type Template } from "@/db/schema";
 
 export interface LineItem {
     id: string;

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUnitLabel } from "../../../lib/units";
-import { getTemplates, type Template } from "@/lib/actions/template.actions";
+import { getTemplates } from "@/lib/actions/template.actions";
+import { type Template } from "@/db/schema";
 
 interface TemplateSelectorProps {
     selectedTemplateId?: number;

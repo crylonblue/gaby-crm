@@ -12,7 +12,7 @@ export async function getSellerInfo(): Promise<Seller> {
   if (settings) {
     return {
       name: settings.name || "Ihr Unternehmen",
-      subHeadline: settings.subHeadline,
+      subHeadline: settings.subHeadline ?? undefined,
       address: {
         street: settings.street || "",
         streetNumber: settings.streetNumber || "",
@@ -20,20 +20,20 @@ export async function getSellerInfo(): Promise<Seller> {
         city: settings.city || "",
         country: (settings.country || "DE") as "DE",
       },
-      phoneNumber: settings.phoneNumber,
-      email: settings.email,
-      taxNumber: settings.taxNumber,
-      vatId: settings.vatId,
+      phoneNumber: settings.phoneNumber ?? undefined,
+      email: settings.email ?? undefined,
+      taxNumber: settings.taxNumber ?? undefined,
+      vatId: settings.vatId ?? undefined,
       contact: settings.contactName || settings.contactPhone || settings.contactEmail
         ? {
-            name: settings.contactName,
-            phone: settings.contactPhone,
-            email: settings.contactEmail,
+            name: settings.contactName ?? undefined,
+            phone: settings.contactPhone ?? undefined,
+            email: settings.contactEmail ?? undefined,
           }
         : undefined,
-      court: settings.court,
-      registerNumber: settings.registerNumber,
-      managingDirector: settings.managingDirector,
+      court: settings.court ?? undefined,
+      registerNumber: settings.registerNumber ?? undefined,
+      managingDirector: settings.managingDirector ?? undefined,
     };
   }
 
@@ -75,7 +75,7 @@ export async function getBankDetails(): Promise<BankDetails | undefined> {
     return {
       iban: settings.iban,
       bankName: settings.bankName,
-      bic: settings.bic,
+      bic: settings.bic ?? undefined,
     };
   }
 
@@ -100,7 +100,7 @@ export async function getBankDetails(): Promise<BankDetails | undefined> {
  */
 export async function getLogoUrl(): Promise<string | undefined> {
   const settings = await getSellerSettings();
-  return settings?.logoUrl || process.env.SELLER_LOGO_URL;
+  return settings?.logoUrl ?? process.env.SELLER_LOGO_URL ?? undefined;
 }
 
 /**
