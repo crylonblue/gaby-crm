@@ -62,6 +62,16 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
       : `${invoice.seller.address.country}${invoice.seller.vatId}`
     : undefined;
 
+  // BR-CO-26: At least one of seller identifier (BT-29), legal registration (BT-30), or VAT ID (BT-31) required
+  // Build legal registration if registerNumber is provided (BT-30)
+  const sellerLegalRegistration = invoice.seller.registerNumber
+    ? {
+        identifier: invoice.seller.registerNumber,
+        // Scheme 0002 = Handelsregister (German commercial register)
+        schemeIdentifier: "0002" as const,
+      }
+    : undefined;
+
   // BR-DE-15: Buyer Reference - Use provided reference or fallback to invoice number
   const buyerReference = invoice.buyerReference || invoice.invoiceNumber;
 
@@ -141,6 +151,9 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
             },
             // PEPPOL-EN16931-R020: Seller electronic address
             electronicAddress: sellerElectronicAddress,
+            // BR-CO-26: Legal registration (BT-30) - Handelsregisternummer
+            legalRegistration: sellerLegalRegistration,
+            // Tax registration (BT-31 VAT ID, local tax number)
             taxRegistration:
               sellerVatId || invoice.seller.taxNumber
                 ? {
