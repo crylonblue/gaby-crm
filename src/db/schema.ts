@@ -65,6 +65,12 @@ export const invoices = sqliteTable("invoices", {
     abtretungserklaerungUrl: text("abtretungserklaerung_url"),
     paid: integer("paid", { mode: "boolean" }).notNull().default(false), // Whether the invoice has been paid
     queuedForSending: integer("queued_for_sending", { mode: "boolean" }).notNull().default(false), // Whether the invoice is queued for sending
+    lineItemsJson: text("line_items_json"), // JSON string storing line items array for flexible position management
+    // Email sending details
+    emailSubject: text("email_subject"), // Subject line for the email
+    emailBody: text("email_body"), // Body text for the email
+    // XRechnung XML
+    xrechnungXmlUrl: text("xrechnung_xml_url"), // URL to the XRechnung XML file
 });
 
 export const customerBudgets = sqliteTable("customer_budgets", {
@@ -72,6 +78,54 @@ export const customerBudgets = sqliteTable("customer_budgets", {
     customerId: integer("customer_id").notNull(),
     year: integer("year").notNull(),
     amount: real("amount").notNull().default(0),
+});
+
+export const sellerSettings = sqliteTable("seller_settings", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // Company/Seller Information
+    name: text("name").notNull().default(""),
+    subHeadline: text("sub_headline"),
+    // Address
+    street: text("street").notNull().default(""),
+    streetNumber: text("street_number").notNull().default(""),
+    postalCode: text("postal_code").notNull().default(""),
+    city: text("city").notNull().default(""),
+    country: text("country").notNull().default("DE"),
+    // Contact
+    phoneNumber: text("phone_number"),
+    email: text("email"),
+    // Contact Person (for XRechnung)
+    contactName: text("contact_name"),
+    contactPhone: text("contact_phone"),
+    contactEmail: text("contact_email"),
+    // Tax Information
+    taxNumber: text("tax_number"),
+    vatId: text("vat_id"),
+    // Legal Information
+    court: text("court"),
+    registerNumber: text("register_number"),
+    managingDirector: text("managing_director"),
+    // Bank Details
+    bankName: text("bank_name"),
+    iban: text("iban"),
+    bic: text("bic"),
+    // Logo
+    logoUrl: text("logo_url"),
+    // Invoice Text
+    invoiceGreeting: text("invoice_greeting"),
+    // Timestamps
+    updatedAt: text("updated_at").notNull(),
+});
+
+export const templates = sqliteTable("templates", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    description: text("description"),
+    unit: text("unit").notNull().default("piece"),
+    unitPrice: real("unit_price").notNull().default(0),
+    defaultVatRate: real("default_vat_rate").notNull().default(19),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
 });
 
 export type Customer = typeof customers.$inferSelect;
@@ -82,4 +136,10 @@ export type NewInvoice = typeof invoices.$inferInsert;
 
 export type CustomerBudget = typeof customerBudgets.$inferSelect;
 export type NewCustomerBudget = typeof customerBudgets.$inferInsert;
+
+export type SellerSettings = typeof sellerSettings.$inferSelect;
+export type NewSellerSettings = typeof sellerSettings.$inferInsert;
+
+export type Template = typeof templates.$inferSelect;
+export type NewTemplate = typeof templates.$inferInsert;
 

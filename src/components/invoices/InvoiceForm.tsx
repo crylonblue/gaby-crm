@@ -12,9 +12,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createInvoice } from "@/lib/actions/invoice.actions";
 import { toast } from "sonner";
 import { Customer } from "@/db/schema";
@@ -35,14 +32,19 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { LineItemsEditor, LineItem } from "./LineItemsEditor";
 
 const invoiceSchema = z.object({
     customerId: z.string().min(1, "Kunde ist erforderlich"),
-    hours: z.coerce.number().min(0.1, "Stunden müssen größer als 0 sein"),
-    description: z.string().min(1, "Beschreibung ist erforderlich"),
-    km: z.coerce.number().optional().default(0),
-    ratePerHour: z.coerce.number().min(0, "Preis muss positiv sein").default(47.0),
-    ratePerKm: z.coerce.number().min(0, "Preis muss positiv sein").default(0.30),
+    lineItems: z.array(z.object({
+        id: z.string(),
+        description: z.string().min(1, "Beschreibung ist erforderlich"),
+        quantity: z.number().min(0.01, "Menge muss größer als 0 sein"),
+        unit: z.string().min(1, "Einheit ist erforderlich"),
+        unitPrice: z.number().min(0, "Preis muss positiv sein"),
+        vatRate: z.number().min(0).max(100),
+        total: z.number(),
+    })).min(1, "Mindestens eine Position ist erforderlich"),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -57,30 +59,24 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
     const [open, setOpen] = useState(false);
 
     const form = useForm<InvoiceFormValues>({
-        resolver: zodResolver(invoiceSchema) as any,
+        resolver: zodResolver(invoiceSchema),
         defaultValues: {
             customerId: "",
-            hours: 0,
-            description: "",
-            km: 0,
-            ratePerHour: 47.0,
-            ratePerKm: 0.30,
+            lineItems: [],
         },
     });
 
     const selectedCustomerId = form.watch("customerId");
-    const hours = form.watch("hours");
-    const km = form.watch("km");
-    const ratePerHour = form.watch("ratePerHour");
-    const ratePerKm = form.watch("ratePerKm");
+    const lineItems = form.watch("lineItems");
 
     // Get selected customer and their yearly budget
     const selectedCustomer = customers.find(c => c.id.toString() === selectedCustomerId);
     const yearlyBudget = selectedCustomer?.yearlyBudget || 0;
 
-    // Calculate invoice amount in real-time
-    const invoiceAmount = ((hours || 0) * (ratePerHour || 0) + (km || 0) * (ratePerKm || 0)) * 1.19;
-
+    // Calculate invoice totals
+    const netTotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+    const vatTotal = lineItems.reduce((sum, item) => sum + (item.total * (item.vatRate / 100)), 0);
+    const grossTotal = netTotal + vatTotal;
 
     function onSubmit(data: InvoiceFormValues) {
         startTransition(async () => {
@@ -90,6 +86,12 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 toast.error("Kunde nicht gefunden");
                 return;
             }
+
+            // Convert line items to the format expected by the database
+            // For backward compatibility, we'll use the first item for hours/km if applicable
+            const firstItem = data.lineItems[0];
+            const hoursItem = data.lineItems.find(item => item.unit === "hour");
+            const kmItem = data.lineItems.find(item => item.unit === "km");
 
             const invoiceData = {
                 customerId: selectedCustomer.id,
@@ -110,12 +112,15 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 city: selectedCustomer.city || "",
                 invoiceEmail: "",
 
-                // Invoice Data
-                hours: data.hours,
-                description: data.description,
-                km: data.km,
-                ratePerHour: data.ratePerHour,
-                ratePerKm: data.ratePerKm,
+                // Invoice Data - use first item or hours/km items
+                hours: hoursItem?.quantity || firstItem?.quantity || 0,
+                description: firstItem?.description || "",
+                km: kmItem?.quantity || 0,
+                ratePerHour: hoursItem?.unitPrice || firstItem?.unitPrice || 47.0,
+                ratePerKm: kmItem?.unitPrice || 0.30,
+                
+                // Store line items as JSON for future use
+                lineItemsJson: JSON.stringify(data.lineItems),
             };
 
             // @ts-ignore
@@ -123,7 +128,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
 
             if (result.success) {
                 toast.success("Rechnung erstellt");
-                router.push("/invoices"); // Redirect to dashboard
+                router.push("/invoices");
             } else {
                 toast.error(result.error || "Fehler beim Erstellen");
             }
@@ -202,72 +207,17 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                     )}
                 />
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                        control={form.control}
-                        name="hours"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Stunden</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.25" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="ratePerHour"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Stundensatz (€)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                        control={form.control}
-                        name="km"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Kilometer</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="ratePerKm"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Fahrtkosten (€/km)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
                 <FormField
                     control={form.control}
-                    name="description"
+                    name="lineItems"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Beschreibung / Datum</FormLabel>
+                            <FormLabel>Positionen</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="Details zur Leistung, Datum..." {...field} />
+                                <LineItemsEditor
+                                    lineItems={field.value}
+                                    onChange={field.onChange}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -282,13 +232,13 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                                 Rechnungsbetrag (inkl. MwSt.)
                             </div>
                             <div className="text-2xl font-bold text-primary">
-                                {invoiceAmount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                                {grossTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                             </div>
                         </div>
                     </div>
                     <div className="mt-2 space-y-1">
                         <div className="text-xs text-muted-foreground">
-                            Netto: {((hours || 0) * (ratePerHour || 0) + (km || 0) * (ratePerKm || 0)).toLocaleString("de-DE", { style: "currency", currency: "EUR" })} + 19% MwSt.
+                            Netto: {netTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} + MwSt.: {vatTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                         </div>
                         {selectedCustomer && (
                             <div className="text-xs text-muted-foreground">

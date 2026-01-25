@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` ADD `send_only_abtretungserklaerung` integer DEFAULT false NOT NULL;

@@ -20,9 +20,10 @@ import { Customer } from "@/db/schema";
 import { useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { uploadFile } from "@/lib/actions/upload.actions";
-import { useState } from "react";
+import { uploadAbtretungserklaerung } from "@/lib/actions/upload.actions";
+import { useState, useRef } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
+import { v4 as uuidv4 } from "uuid";
 
 const customerSchema = z.object({
     lastName: z.string().min(1, "Nachname ist erforderlich"),
@@ -53,6 +54,8 @@ export function CustomerForm({ customer }: CustomerFormProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [isUploading, setIsUploading] = useState(false);
+    // Use a stable temp ID for new customers (for file uploads before save)
+    const tempCustomerIdRef = useRef<string>(uuidv4());
 
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerSchema),
@@ -102,8 +105,11 @@ export function CustomerForm({ customer }: CustomerFormProps) {
         const formData = new FormData();
         formData.append("file", file);
 
+        // Use existing customer ID or temp ID for new customers
+        const customerId = customer?.id?.toString() || tempCustomerIdRef.current;
+
         try {
-            const result = await uploadFile(formData);
+            const result = await uploadAbtretungserklaerung(formData, customerId);
             if (result.success && result.url) {
                 form.setValue("abtretungserklaerungUrl", result.url);
                 toast.success("Datei erfolgreich hochgeladen");

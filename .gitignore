@@ -45,3 +45,6 @@ sqlite.db
 *.db
 *.sqlite
 *-journal
+
+# Auto Claude data directory
+.auto-claude/

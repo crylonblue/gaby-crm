@@ -46,33 +46,37 @@ export function FilteredCustomerList({ customers }: FilteredCustomerListProps) {
             </div>
 
             {/* Desktop View */}
-            <div className="hidden md:block rounded-md border overflow-x-auto w-full">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nachname</TableHead>
-                            <TableHead>Vorname</TableHead>
-                            <TableHead>Stadt</TableHead>
-                            <TableHead>Abgerechnet ({new Date().getFullYear()})</TableHead>
-                            <TableHead>Pflegegrad</TableHead>
-                            <TableHead className="w-[100px]">Aktionen</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredCustomers.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                    {searchTerm ? "Keine Kunden gefunden, die der Suche entsprechen." : "Keine Kunden vorhanden."}
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            filteredCustomers.map((customer) => (
-                                <CustomerRow key={customer.id} customer={customer} />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+            <Card className="hidden md:block py-0 overflow-hidden">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto w-full">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nachname</TableHead>
+                                    <TableHead>Vorname</TableHead>
+                                    <TableHead>Stadt</TableHead>
+                                    <TableHead>Abgerechnet ({new Date().getFullYear()})</TableHead>
+                                    <TableHead>Pflegegrad</TableHead>
+                                    <TableHead className="w-[100px]">Aktionen</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredCustomers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                            {searchTerm ? "Keine Kunden gefunden, die der Suche entsprechen." : "Keine Kunden vorhanden."}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredCustomers.map((customer) => (
+                                        <CustomerRow key={customer.id} customer={customer} />
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Mobile View */}
             <div className="grid gap-4 md:hidden">

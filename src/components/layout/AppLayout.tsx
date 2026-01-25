@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, FileText, Menu, LayoutDashboard, LogOut } from "lucide-react";
+import { Users, FileText, Menu, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -16,6 +16,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/customers", label: "Kunden", icon: Users },
         { href: "/invoices", label: "Rechnungen", icon: FileText },
+        { href: "/settings", label: "Einstellungen", icon: Settings },
     ];
 
     const handleLogout = async () => {

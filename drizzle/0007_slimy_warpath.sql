@@ -1,0 +1,1 @@
+ALTER TABLE `seller_settings` ADD `invoice_greeting` text;

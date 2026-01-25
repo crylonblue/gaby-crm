@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` ADD `line_items_json` text;

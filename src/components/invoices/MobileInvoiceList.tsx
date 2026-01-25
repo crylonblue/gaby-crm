@@ -10,6 +10,7 @@ import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
 import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
 import { getGoogleDriveViewerUrl } from "@/lib/utils";
+import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
 
 interface MobileInvoiceListProps {
     invoices: Invoice[];
@@ -27,7 +28,7 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
     return (
         <div className="grid gap-4">
             {invoices.map((invoice) => {
-                const amount = ((invoice.hours * invoice.ratePerHour) + (invoice.km * invoice.ratePerKm)) * 1.19;
+                const amount = calculateInvoiceGrossAmount(invoice);
 
                 return (
                     <Card key={invoice.id}>
@@ -100,7 +101,13 @@ export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
                                     </Link>
                                 </Button>
                             )}
-                            <SendInvoiceDialog invoiceId={invoice.id} customerId={invoice.customerId} />
+                            <SendInvoiceDialog 
+                                invoiceId={invoice.id} 
+                                customerId={invoice.customerId} 
+                                invoiceNumber={invoice.invoiceNumber || undefined}
+                                customerLastName={invoice.lastName}
+                                insuranceNumber={invoice.insuranceNumber || undefined}
+                            />
                             <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
                             <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
                         </CardFooter>

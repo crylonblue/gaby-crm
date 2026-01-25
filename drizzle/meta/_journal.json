@@ -29,6 +29,41 @@
       "when": 1767384295866,
       "tag": "0003_busy_ultron",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1769271514834,
+      "tag": "0004_burly_ulik",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1769272283967,
+      "tag": "0005_living_fallen_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1769272417223,
+      "tag": "0006_chubby_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1769273131088,
+      "tag": "0007_slimy_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1769273555573,
+      "tag": "0008_faithful_maelstrom",
+      "breakpoints": true
     }
   ]
 }

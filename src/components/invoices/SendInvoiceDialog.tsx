@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { sendInvoice } from "@/lib/actions/invoice.actions";
@@ -22,9 +23,12 @@ import { getCustomer } from "@/lib/actions/customer.actions";
 interface SendInvoiceDialogProps {
     invoiceId: number;
     customerId: number;
+    invoiceNumber?: string;
+    customerLastName?: string;
+    insuranceNumber?: string;
 }
 
-export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogProps) {
+export function SendInvoiceDialog({ invoiceId, customerId, invoiceNumber, customerLastName, insuranceNumber }: SendInvoiceDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [useInsuranceEmail, setUseInsuranceEmail] = useState(true);
@@ -33,6 +37,8 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
     const [insuranceEmail, setInsuranceEmail] = useState("");
     const [hasAbtretungserklaerung, setHasAbtretungserklaerung] = useState(false);
     const [loadingCustomer, setLoadingCustomer] = useState(false);
+    const [emailSubject, setEmailSubject] = useState("");
+    const [emailBody, setEmailBody] = useState("");
 
     useEffect(() => {
         if (open && customerId) {
@@ -45,6 +51,24 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
                 }
                 setLoadingCustomer(false);
             });
+            // Set default values when opening
+            const defaultSubject = insuranceNumber 
+                ? `${insuranceNumber}: Rechnung für die Verhinderungspflege` 
+                : "Rechnung für die Verhinderungspflege";
+            const defaultBody = `Guten Tag,
+
+Bitte überweisen Sie die Rechnung für die Verhinderungspflege von Frau/Herrn ${customerLastName || ""} auf mein Konto. Die Abtretungserklärung liegt bereits vor.
+Vielen Dank und mit freundlichen Grüßen,
+
+Gaby Casper
+
+---
+Seniorenassistenz
+Holmer Weg 14
+21244 Buchholz
+0171/3850187`;
+            setEmailSubject(defaultSubject);
+            setEmailBody(defaultBody);
         } else if (!open) {
             // Reset form when dialog closes
             setUseInsuranceEmail(true);
@@ -52,8 +76,10 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
             setAttachAbtretungserklaerung(false);
             setInsuranceEmail("");
             setHasAbtretungserklaerung(false);
+            setEmailSubject("");
+            setEmailBody("");
         }
-    }, [open, customerId]);
+    }, [open, customerId, customerLastName, insuranceNumber]);
 
     const handleUseInsuranceEmailChange = (checked: boolean) => {
         setUseInsuranceEmail(checked);
@@ -70,11 +96,18 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
             return;
         }
 
+        if (!emailSubject.trim()) {
+            toast.error("Bitte geben Sie einen Betreff ein");
+            return;
+        }
+
         startTransition(async () => {
             const result = await sendInvoice({
                 invoiceId,
                 email,
                 attachAbtretungserklaerung: hasAbtretungserklaerung ? attachAbtretungserklaerung : false,
+                emailSubject: emailSubject.trim(),
+                emailBody: emailBody.trim(),
             });
 
             if (result.success) {
@@ -131,6 +164,27 @@ export function SendInvoiceDialog({ invoiceId, customerId }: SendInvoiceDialogPr
                                     disabled={useInsuranceEmail}
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="emailSubject">Betreff</Label>
+                            <Input
+                                id="emailSubject"
+                                placeholder="Betreff der E-Mail"
+                                value={emailSubject}
+                                onChange={(e) => setEmailSubject(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="emailBody">Nachricht</Label>
+                            <Textarea
+                                id="emailBody"
+                                placeholder="Text der E-Mail"
+                                value={emailBody}
+                                onChange={(e) => setEmailBody(e.target.value)}
+                                rows={12}
+                            />
                         </div>
 
                         {hasAbtretungserklaerung && (
