@@ -356,13 +356,20 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   y -= 18;
   let netTotal = 0;
   const maxDescWidth = CONTENT_WIDTH * 0.45;
+  const lineItemFontSize = 10;
+  const lineItemLineHeight = 14;
 
   invoice.items.forEach((item) => {
     const itemTotal = calculateItemTotal(item);
     netTotal += itemTotal;
 
-    // Description (without numeration)
-    drawText(item.description, col.description, y, { maxWidth: maxDescWidth });
+    // Wrap description text to multiple lines if needed
+    const descriptionLines = wrapText(sanitizeText(item.description), maxDescWidth, helvetica, lineItemFontSize);
+    
+    // Draw first line of description on same row as other columns
+    if (descriptionLines.length > 0) {
+      drawText(descriptionLines[0], col.description, y);
+    }
     
     // Quantity with unit combined for German format
     const qtyText = formatQuantity(item.quantity, language);
@@ -377,6 +384,13 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
     // Total
     drawTextRight(formatCurrency(itemTotal, language), col.total, y);
 
+    // Draw remaining description lines below
+    for (let i = 1; i < descriptionLines.length; i++) {
+      y -= lineItemLineHeight;
+      drawText(descriptionLines[i], col.description, y);
+    }
+
+    // Add spacing after each item (consistent base spacing)
     y -= 20;
   });
 
