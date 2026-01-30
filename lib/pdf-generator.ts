@@ -525,6 +525,11 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   let col1Y = footerY;
   drawFooterValue(invoice.seller.name, footerCols[0], col1Y);
   col1Y -= footerLineHeight;
+  // Show subHeadline (e.g., "Steuerberatungsgesellschaft") if available
+  if (invoice.seller.subHeadline) {
+    drawFooterValue(invoice.seller.subHeadline, footerCols[0], col1Y);
+    col1Y -= footerLineHeight;
+  }
   drawFooterValue(sellerAddress.streetLine, footerCols[0], col1Y);
   col1Y -= footerLineHeight;
   drawFooterValue(sellerAddress.cityLine, footerCols[0], col1Y);

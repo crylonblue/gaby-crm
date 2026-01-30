@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateSellerSettings, uploadLogo, deleteLogo } from "@/lib/actions/seller.actions";
 import { toast } from "sonner";
 import { SellerSettings } from "@/db/schema";
-import { useTransition, useState } from "react";
+import { useTransition, useState, useRef } from "react";
 import { Loader2, Upload, X } from "lucide-react";
 
 const sellerSettingsSchema = z.object({
@@ -55,6 +55,7 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
     const [isPending, startTransition] = useTransition();
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const [logoPreview, setLogoPreview] = useState<string | null>(settings?.logoUrl || null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<SellerSettingsFormValues>({
         resolver: zodResolver(sellerSettingsSchema),
@@ -518,33 +519,33 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
                     )}
 
                     <div className="flex items-center gap-4">
-                        <label className="cursor-pointer">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleLogoUpload}
-                                className="hidden"
-                                disabled={isUploadingLogo}
-                            />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                disabled={isUploadingLogo}
-                                className="gap-2"
-                            >
-                                {isUploadingLogo ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Hochladen...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="h-4 w-4" />
-                                        {logoPreview ? "Logo ändern" : "Logo hochladen"}
-                                    </>
-                                )}
-                            </Button>
-                        </label>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                            disabled={isUploadingLogo}
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isUploadingLogo}
+                            className="gap-2"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {isUploadingLogo ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Hochladen...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="h-4 w-4" />
+                                    {logoPreview ? "Logo ändern" : "Logo hochladen"}
+                                </>
+                            )}
+                        </Button>
                         <p className="text-sm text-muted-foreground">
                             PNG oder JPG, max. 5MB
                         </p>
