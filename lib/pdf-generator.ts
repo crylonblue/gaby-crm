@@ -185,6 +185,12 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   const senderOneLine = `${invoice.seller.name} - ${sellerAddress.streetLine} - ${sellerAddress.cityLine}`;
   drawText(senderOneLine, MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY });
 
+  // Seller subHeadline below sender line (e.g., "Mitglied im Bund deutscher Senioren-Assistenten")
+  if (invoice.seller.subHeadline) {
+    y -= 11;
+    drawText(sanitizeText(invoice.seller.subHeadline), MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY });
+  }
+
   // Logo (top right)
   let logoHeight = 0;
   if (invoice.logoUrl) {
