@@ -128,7 +128,12 @@ export async function uploadLogo(formData: FormData) {
         const updatedAt = new Date().toISOString();
 
         if (existing.length > 0) {
-            // Delete old logo if exists
+            // Update settings with new logo URL first
+            await db.update(sellerSettings)
+                .set({ logoUrl, updatedAt })
+                .where(eq(sellerSettings.id, existing[0].id));
+
+            // Delete old logo after successful upload and DB update
             if (existing[0].logoUrl) {
                 try {
                     await deleteLogoFromS3(companyId);
@@ -136,10 +141,6 @@ export async function uploadLogo(formData: FormData) {
                     console.warn("Could not delete old logo:", error);
                 }
             }
-
-            await db.update(sellerSettings)
-                .set({ logoUrl, updatedAt })
-                .where(eq(sellerSettings.id, existing[0].id));
         } else {
             // Create new settings with logo
             await db.insert(sellerSettings).values({

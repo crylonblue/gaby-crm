@@ -526,9 +526,13 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   drawFooterValue(invoice.seller.name, footerCols[0], col1Y);
   col1Y -= footerLineHeight;
   // Show subHeadline (e.g., "Steuerberatungsgesellschaft") if available
+  // Wrap long subHeadlines so they don't overflow into the next column
   if (invoice.seller.subHeadline) {
-    drawFooterValue(invoice.seller.subHeadline, footerCols[0], col1Y);
-    col1Y -= footerLineHeight;
+    const subHeadlineLines = wrapText(sanitizeText(invoice.seller.subHeadline), footerColWidth - 5, helvetica, footerFontSize);
+    for (const line of subHeadlineLines) {
+      drawFooterValue(line, footerCols[0], col1Y);
+      col1Y -= footerLineHeight;
+    }
   }
   drawFooterValue(sellerAddress.streetLine, footerCols[0], col1Y);
   col1Y -= footerLineHeight;
