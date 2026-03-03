@@ -260,6 +260,12 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
     ? dbInvoice.date.split("T")[0] 
     : dbInvoice.date;
 
+  const hasInsurance = dbInvoice.healthInsurance || dbInvoice.healthInsuranceAddress;
+  const insurance = hasInsurance ? {
+    name: dbInvoice.healthInsurance || undefined,
+    address: dbInvoice.healthInsuranceAddress || undefined,
+  } : undefined;
+
   return {
     invoiceNumber,
     invoiceDate,
@@ -278,6 +284,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
       insuranceNumber: dbInvoice.insuranceNumber || undefined,
       additionalInfo: dbInvoice.invoiceEmail ? [dbInvoice.invoiceEmail] : undefined,
     },
+    insurance,
     items,
     taxRate: 19, // 19% VAT
     currency: "EUR",

@@ -38,6 +38,7 @@ const customerSchema = z.object({
     city: z.string().optional(),
     careLevel: z.string().optional(),
     healthInsurance: z.string().optional(),
+    healthInsuranceAddress: z.string().optional(),
     healthInsuranceEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
     insuranceNumber: z.string().optional(),
     notes: z.string().optional(),
@@ -72,6 +73,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             city: customer?.city || "",
             careLevel: customer?.careLevel || "",
             healthInsurance: customer?.healthInsurance || "",
+            healthInsuranceAddress: customer?.healthInsuranceAddress || "",
             healthInsuranceEmail: customer?.healthInsuranceEmail || "",
             insuranceNumber: customer?.insuranceNumber || "",
             notes: customer?.notes || "",
@@ -283,6 +285,19 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                                     <FormLabel>Krankenkasse</FormLabel>
                                     <FormControl>
                                         <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="healthInsuranceAddress"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Adresse der Krankenkasse</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Straße, PLZ Ort" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

@@ -13,6 +13,7 @@ export const customers = sqliteTable("customers", {
     city: text("city"),
     insuranceNumber: text("insurance_number"),
     healthInsurance: text("health_insurance"),
+    healthInsuranceAddress: text("health_insurance_address"),
     healthInsurancePhone: text("health_insurance_phone"),
     healthInsuranceEmail: text("health_insurance_email"),
     careLevel: text("care_level"), // 1-5
@@ -32,6 +33,7 @@ export const invoices = sqliteTable("invoices", {
     lastName: text("last_name").notNull(),
     firstName: text("first_name").notNull(),
     healthInsurance: text("health_insurance"),
+    healthInsuranceAddress: text("health_insurance_address"),
     insuranceNumber: text("insurance_number"),
     birthDate: text("birth_date"),
     careLevel: text("care_level"),

@@ -103,6 +103,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 lastName: selectedCustomer.lastName,
                 firstName: selectedCustomer.firstName,
                 healthInsurance: selectedCustomer.healthInsurance || "",
+                healthInsuranceAddress: selectedCustomer.healthInsuranceAddress || "",
                 insuranceNumber: selectedCustomer.insuranceNumber || "",
                 birthDate: selectedCustomer.birthDate || "",
                 careLevel: selectedCustomer.careLevel || "",

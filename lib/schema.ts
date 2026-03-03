@@ -40,6 +40,11 @@ export const SellerSchema = z.object({
   managingDirector: z.string().optional(), // e.g., "Max Mustermann"
 });
 
+export const InsuranceSchema = z.object({
+  name: z.string().optional(),
+  address: z.string().optional(),
+});
+
 export const CustomerSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
   address: AddressSchema,
@@ -77,6 +82,7 @@ export const InvoiceSchema = z.object({
   serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   seller: SellerSchema,
   customer: CustomerSchema,
+  insurance: InsuranceSchema.optional(),
   items: z.array(InvoiceItemSchema).min(1, "At least one item is required"),
   taxRate: z.number().min(0).max(100, "Tax rate must be between 0 and 100"),
   currency: z.string().length(3, "Currency must be ISO 4217 format (e.g., 'EUR', 'USD')").default("EUR"),
@@ -202,6 +208,7 @@ export type Invoice = z.infer<typeof InvoiceSchema>;
 export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
 export type Seller = z.infer<typeof SellerSchema>;
 export type Customer = z.infer<typeof CustomerSchema>;
+export type Insurance = z.infer<typeof InsuranceSchema>;
 export type BankDetails = z.infer<typeof BankDetailsSchema>;
 export type Address = z.infer<typeof AddressSchema>;
 export type Contact = z.infer<typeof ContactSchema>;

@@ -40,6 +40,7 @@ export default function ImportPage() {
             birthDate: row["Geburtsdatum"] || row["birthDate"] || null,
             insuranceNumber: row["Versicherungsnummer"] || row["insuranceNumber"] || null,
             healthInsurance: row["Krankenkasse"] || row["healthInsurance"] || null,
+            healthInsuranceAddress: row["Krankenkasse Adresse"] || row["healthInsuranceAddress"] || null,
             healthInsuranceEmail: row["Krankenkasse Email"] || row["healthInsuranceEmail"] || null,
             careLevel: row["Pflegegrad"] || row["careLevel"] || null,
             notes: row["Notizen"] || row["notes"] || null,
