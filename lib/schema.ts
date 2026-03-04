@@ -40,9 +40,11 @@ export const SellerSchema = z.object({
   managingDirector: z.string().optional(), // e.g., "Max Mustermann"
 });
 
+// Insurance as invoice recipient (buyer) - required for XRechnung/eRechnung
 export const InsuranceSchema = z.object({
-  name: z.string().optional(),
-  address: z.string().optional(),
+  name: z.string().min(1, "Insurance name is required"),
+  address: AddressSchema,
+  email: z.string().email().optional().or(z.literal('')),
 });
 
 export const CustomerSchema = z.object({
@@ -82,7 +84,7 @@ export const InvoiceSchema = z.object({
   serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   seller: SellerSchema,
   customer: CustomerSchema,
-  insurance: InsuranceSchema.optional(),
+  insurance: InsuranceSchema, // Recipient/buyer - always the health insurance for XRechnung
   items: z.array(InvoiceItemSchema).min(1, "At least one item is required"),
   taxRate: z.number().min(0).max(100, "Tax rate must be between 0 and 100"),
   currency: z.string().length(3, "Currency must be ISO 4217 format (e.g., 'EUR', 'USD')").default("EUR"),
@@ -181,9 +183,9 @@ export function validateXRechnungInvoice(invoice: Invoice): {
     errors.push("BR-DE-4: Verkäufer-PLZ ist für XRechnung erforderlich");
   }
 
-  // BR-DE-9: Buyer post code required
-  if (!invoice.customer.address.postalCode) {
-    errors.push("BR-DE-9: Käufer-PLZ ist für XRechnung erforderlich");
+  // BR-DE-9: Buyer (insurance) post code required
+  if (!invoice.insurance.address.postalCode) {
+    errors.push("BR-DE-9: Käufer-PLZ (Krankenkasse) ist für XRechnung erforderlich");
   }
 
   // PEPPOL-EN16931-R020: Seller electronic address (informational)
@@ -191,10 +193,9 @@ export function validateXRechnungInvoice(invoice: Invoice): {
     warnings.push("PEPPOL-EN16931-R020: Verkäufer-E-Mail-Adresse empfohlen für elektronischen Rechnungsaustausch");
   }
 
-  // PEPPOL-EN16931-R010: Buyer electronic address (informational)
-  const buyerHasEmail = invoice.customer.additionalInfo?.some(info => info.includes('@'));
-  if (!buyerHasEmail) {
-    warnings.push("PEPPOL-EN16931-R010: Käufer-E-Mail-Adresse empfohlen für elektronischen Rechnungsaustausch");
+  // PEPPOL-EN16931-R010: Buyer (insurance) electronic address (informational)
+  if (!invoice.insurance.email) {
+    warnings.push("PEPPOL-EN16931-R010: Krankenkassen-E-Mail empfohlen für elektronischen Rechnungsaustausch");
   }
 
   return {

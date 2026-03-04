@@ -111,10 +111,9 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
     : undefined;
 
   // Buyer electronic address (PEPPOL-EN16931-R010)
-  // Use customer email from additionalInfo or undefined
-  const buyerEmail = invoice.customer.additionalInfo?.find(info => info.includes('@'));
-  const buyerElectronicAddress = buyerEmail
-    ? { value: buyerEmail, schemeIdentifier: "EM" as const }
+  // Insurance is the buyer/recipient - use insurance email
+  const buyerElectronicAddress = invoice.insurance?.email
+    ? { value: invoice.insurance.email, schemeIdentifier: "EM" as const }
     : undefined;
 
   // Map invoice data to ZUGFeRD EN16931 format (XRechnung standard)
@@ -165,12 +164,12 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
                 : undefined,
           },
           buyer: {
-            name: invoice.customer.name,
+            name: invoice.insurance.name,
             postalAddress: {
-              countryCode: invoice.customer.address.country as any,
-              postCode: invoice.customer.address.postalCode,
-              line1: `${invoice.customer.address.street} ${invoice.customer.address.streetNumber}`,
-              city: invoice.customer.address.city,
+              countryCode: invoice.insurance.address.country as any,
+              postCode: invoice.insurance.address.postalCode,
+              line1: `${invoice.insurance.address.street} ${invoice.insurance.address.streetNumber}`,
+              city: invoice.insurance.address.city,
             },
             // PEPPOL-EN16931-R010: Buyer electronic address
             electronicAddress: buyerElectronicAddress,

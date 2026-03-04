@@ -87,6 +87,16 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 return;
             }
 
+            // Insurance is required as invoice recipient for XRechnung
+            const hasInsurance = selectedCustomer.healthInsurance &&
+                selectedCustomer.healthInsuranceStreet &&
+                selectedCustomer.healthInsurancePostalCode &&
+                selectedCustomer.healthInsuranceCity;
+            if (!hasInsurance) {
+                toast.error("Bitte erfassen Sie zuerst die vollständigen Krankenkassendaten (Name, Straße, PLZ, Ort) beim Kunden.");
+                return;
+            }
+
             // Convert line items to the format expected by the database
             // For backward compatibility, we'll use the first item for hours/km if applicable
             const firstItem = data.lineItems[0];
@@ -103,7 +113,12 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 lastName: selectedCustomer.lastName,
                 firstName: selectedCustomer.firstName,
                 healthInsurance: selectedCustomer.healthInsurance || "",
-                healthInsuranceAddress: selectedCustomer.healthInsuranceAddress || "",
+                healthInsuranceStreet: selectedCustomer.healthInsuranceStreet || "",
+                healthInsuranceHouseNumber: selectedCustomer.healthInsuranceHouseNumber || "",
+                healthInsurancePostalCode: selectedCustomer.healthInsurancePostalCode || "",
+                healthInsuranceCity: selectedCustomer.healthInsuranceCity || "",
+                healthInsuranceCountry: selectedCustomer.healthInsuranceCountry || "DE",
+                healthInsuranceEmail: selectedCustomer.healthInsuranceEmail || "",
                 insuranceNumber: selectedCustomer.insuranceNumber || "",
                 birthDate: selectedCustomer.birthDate || "",
                 careLevel: selectedCustomer.careLevel || "",

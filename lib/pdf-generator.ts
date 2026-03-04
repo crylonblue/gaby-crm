@@ -224,52 +224,32 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   y -= Math.max(logoHeight, 20) + 30;
   const twoColumnY = y;
 
-  // LEFT COLUMN: Insurance (top) + Customer (below, "im Auftrag von" when insurance present)
+  // LEFT COLUMN: Insurance is always the recipient (buyer) - customer below as "im Auftrag von"
   const customerAddress = formatAddress(invoice.customer.address);
-  const hasInsurance = invoice.insurance?.name || invoice.insurance?.address;
+  const insuranceAddress = formatAddress(invoice.insurance.address);
 
-  if (hasInsurance) {
-    // Insurance block (top) - name and address
-    if (invoice.insurance!.name) {
-      drawText(invoice.insurance!.name, MARGIN_LEFT, y, { font: helveticaBold });
-      y -= 14;
-    }
-    if (invoice.insurance!.address) {
-      const addrLines = sanitizeText(invoice.insurance!.address).split(',').map(s => s.trim()).filter(Boolean);
-      for (const line of addrLines) {
-        drawText(line, MARGIN_LEFT, y);
-        y -= 14;
-      }
-    }
-    y -= 8; // Spacing before customer
+  // Insurance block (top) - name and address
+  drawText(invoice.insurance.name, MARGIN_LEFT, y, { font: helveticaBold });
+  y -= 14;
+  drawText(insuranceAddress.streetLine, MARGIN_LEFT, y);
+  y -= 14;
+  drawText(insuranceAddress.cityLine, MARGIN_LEFT, y);
+  y -= 14;
+  if (invoice.insurance.address.country && invoice.insurance.address.country !== 'DE') {
+    drawText(getCountryName(invoice.insurance.address.country, language), MARGIN_LEFT, y);
+    y -= 14;
+  }
+  y -= 8; // Spacing before customer
 
-    // Customer block (below) - "im Auftrag von" smaller, light grey, on one line
-    const imAuftragVon = language === 'de' ? 'im Auftrag von' : 'on behalf of';
-    const customerOneLine = `${invoice.customer.name}, ${customerAddress.streetLine}, ${customerAddress.cityLine}`;
-    drawText(`${imAuftragVon} ${customerOneLine}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
+  // Customer block (below) - "im Auftrag von" smaller, light grey, on one line
+  const imAuftragVon = language === 'de' ? 'im Auftrag von' : 'on behalf of';
+  const customerOneLine = `${invoice.customer.name}, ${customerAddress.streetLine}, ${customerAddress.cityLine}`;
+  drawText(`${imAuftragVon} ${customerOneLine}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
+  y -= 12;
+  if (invoice.customer.insuranceNumber) {
+    const insuranceLabel = language === 'de' ? 'Versicherungsnummer:' : 'Insurance Number:';
+    drawText(`${insuranceLabel} ${invoice.customer.insuranceNumber}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
     y -= 12;
-    if (invoice.customer.insuranceNumber) {
-      const insuranceLabel = language === 'de' ? 'Versicherungsnummer:' : 'Insurance Number:';
-      drawText(`${insuranceLabel} ${invoice.customer.insuranceNumber}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
-      y -= 12;
-    }
-  } else {
-    // No insurance: customer as main recipient (original layout)
-    drawText(invoice.customer.name, MARGIN_LEFT, y, { font: helveticaBold });
-    y -= 14;
-    drawText(customerAddress.streetLine, MARGIN_LEFT, y);
-    y -= 14;
-    drawText(customerAddress.cityLine, MARGIN_LEFT, y);
-    y -= 14;
-    if (invoice.customer.address.country && invoice.customer.address.country !== 'DE') {
-      drawText(getCountryName(invoice.customer.address.country, language), MARGIN_LEFT, y);
-      y -= 14;
-    }
-    if (invoice.customer.insuranceNumber) {
-      const insuranceLabel = language === 'de' ? 'Versicherungsnummer:' : 'Insurance Number:';
-      drawText(`${insuranceLabel} ${invoice.customer.insuranceNumber}`, MARGIN_LEFT, y, { size: 9 });
-      y -= 14;
-    }
   }
 
   // RIGHT COLUMN: Metadata Table

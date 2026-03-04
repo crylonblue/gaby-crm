@@ -260,11 +260,36 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
     ? dbInvoice.date.split("T")[0] 
     : dbInvoice.date;
 
-  const hasInsurance = dbInvoice.healthInsurance || dbInvoice.healthInsuranceAddress;
-  const insurance = hasInsurance ? {
-    name: dbInvoice.healthInsurance || undefined,
-    address: dbInvoice.healthInsuranceAddress || undefined,
-  } : undefined;
+  // Insurance is always the recipient (buyer) for XRechnung - use structured address
+  // Fallback to customer address for legacy invoices without insurance address
+  const customerAddress = {
+    street: dbInvoice.street || "",
+    streetNumber: dbInvoice.houseNumber || "",
+    postalCode: dbInvoice.postalCode || "",
+    city: dbInvoice.city || "",
+    country: "DE" as "DE",
+  };
+  const hasInsuranceAddress = dbInvoice.healthInsuranceStreet && dbInvoice.healthInsurancePostalCode && dbInvoice.healthInsuranceCity;
+  const insuranceAddress = hasInsuranceAddress
+    ? {
+        street: dbInvoice.healthInsuranceStreet || "-",
+        streetNumber: dbInvoice.healthInsuranceHouseNumber || "-",
+        postalCode: dbInvoice.healthInsurancePostalCode || "-",
+        city: dbInvoice.healthInsuranceCity || "-",
+        country: (dbInvoice.healthInsuranceCountry || "DE") as "DE",
+      }
+    : {
+        ...customerAddress,
+        street: customerAddress.street || "-",
+        streetNumber: customerAddress.streetNumber || "-",
+        postalCode: customerAddress.postalCode || "-",
+        city: customerAddress.city || "-",
+      }; // Fallback for legacy data
+  const insurance = {
+    name: dbInvoice.healthInsurance || "Krankenkasse",
+    address: insuranceAddress,
+    email: dbInvoice.healthInsuranceEmail || undefined,
+  };
 
   return {
     invoiceNumber,
@@ -273,13 +298,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
     seller,
     customer: {
       name: `${dbInvoice.firstName} ${dbInvoice.lastName}`,
-      address: {
-        street: dbInvoice.street || "",
-        streetNumber: dbInvoice.houseNumber || "",
-        postalCode: dbInvoice.postalCode || "",
-        city: dbInvoice.city || "",
-        country: "DE" as "DE",
-      },
+      address: customerAddress,
       phoneNumber: undefined, // Not stored in invoice snapshot
       insuranceNumber: dbInvoice.insuranceNumber || undefined,
       additionalInfo: dbInvoice.invoiceEmail ? [dbInvoice.invoiceEmail] : undefined,

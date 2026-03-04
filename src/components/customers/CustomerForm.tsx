@@ -38,7 +38,11 @@ const customerSchema = z.object({
     city: z.string().optional(),
     careLevel: z.string().optional(),
     healthInsurance: z.string().optional(),
-    healthInsuranceAddress: z.string().optional(),
+    healthInsuranceStreet: z.string().optional(),
+    healthInsuranceHouseNumber: z.string().optional(),
+    healthInsurancePostalCode: z.string().optional(),
+    healthInsuranceCity: z.string().optional(),
+    healthInsuranceCountry: z.string().optional(),
     healthInsuranceEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
     insuranceNumber: z.string().optional(),
     notes: z.string().optional(),
@@ -73,7 +77,11 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             city: customer?.city || "",
             careLevel: customer?.careLevel || "",
             healthInsurance: customer?.healthInsurance || "",
-            healthInsuranceAddress: customer?.healthInsuranceAddress || "",
+            healthInsuranceStreet: customer?.healthInsuranceStreet || "",
+            healthInsuranceHouseNumber: customer?.healthInsuranceHouseNumber || "",
+            healthInsurancePostalCode: customer?.healthInsurancePostalCode || "",
+            healthInsuranceCity: customer?.healthInsuranceCity || "",
+            healthInsuranceCountry: customer?.healthInsuranceCountry || "DE",
             healthInsuranceEmail: customer?.healthInsuranceEmail || "",
             insuranceNumber: customer?.insuranceNumber || "",
             notes: customer?.notes || "",
@@ -292,12 +300,64 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                         />
                         <FormField
                             control={form.control}
-                            name="healthInsuranceAddress"
+                            name="healthInsuranceStreet"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Adresse der Krankenkasse</FormLabel>
+                                    <FormLabel>Straße (Krankenkasse)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Straße, PLZ Ort" {...field} />
+                                        <Input placeholder="Musterstraße" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="healthInsuranceHouseNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Hausnr. (Krankenkasse)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="healthInsurancePostalCode"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>PLZ (Krankenkasse)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="12345" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="healthInsuranceCity"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Ort (Krankenkasse)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Berlin" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="healthInsuranceCountry"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Land (Krankenkasse)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="DE" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
