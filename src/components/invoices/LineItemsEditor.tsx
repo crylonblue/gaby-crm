@@ -82,9 +82,11 @@ function NumberInput({ value, onChange, min, max, className, placeholder }: Numb
 interface LineItemsEditorProps {
     lineItems: LineItem[];
     onChange: (items: LineItem[]) => void;
+    disabled?: boolean;
+    disabledMessage?: string;
 }
 
-export function LineItemsEditor({ lineItems, onChange }: LineItemsEditorProps) {
+export function LineItemsEditor({ lineItems, onChange, disabled = false, disabledMessage }: LineItemsEditorProps) {
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
     const [pendingTemplateItemId, setPendingTemplateItemId] = useState<string | null>(null);
     const addLineItem = () => {
@@ -133,6 +135,16 @@ export function LineItemsEditor({ lineItems, onChange }: LineItemsEditorProps) {
         }
         setTemplateModalOpen(false);
     };
+
+    if (disabled) {
+        return (
+            <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                    {disabledMessage ?? "Bitte vervollständigen Sie zuerst die Kundendaten (Krankenkasse), um Positionen hinzuzufügen."}
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">

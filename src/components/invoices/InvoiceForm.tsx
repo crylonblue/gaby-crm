@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { Customer } from "@/db/schema";
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronsUpDown, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Command,
@@ -33,6 +34,30 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { LineItemsEditor, LineItem } from "./LineItemsEditor";
+
+/** Required customer fields for XRechnung invoice creation */
+const INVOICE_REQUIRED_FIELDS = [
+    { key: "healthInsurance", label: "Name der Krankenkasse" },
+    { key: "healthInsuranceStreet", label: "Straße der Krankenkasse" },
+    { key: "healthInsurancePostalCode", label: "PLZ der Krankenkasse" },
+    { key: "healthInsuranceCity", label: "Ort der Krankenkasse" },
+] as const;
+
+function getCustomerInvoiceCompleteness(customer: Customer | undefined): { complete: boolean; missingFields: string[] } {
+    if (!customer) return { complete: false, missingFields: [] };
+
+    const missingFields: string[] = [];
+    for (const { key, label } of INVOICE_REQUIRED_FIELDS) {
+        const value = customer[key as keyof Customer];
+        if (!value || (typeof value === "string" && !value.trim())) {
+            missingFields.push(label);
+        }
+    }
+    return {
+        complete: missingFields.length === 0,
+        missingFields,
+    };
+}
 
 const invoiceSchema = z.object({
     customerId: z.string().min(1, "Kunde ist erforderlich"),
@@ -72,6 +97,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
     // Get selected customer and their yearly budget
     const selectedCustomer = customers.find(c => c.id.toString() === selectedCustomerId);
     const yearlyBudget = selectedCustomer?.yearlyBudget || 0;
+    const { complete: customerComplete, missingFields } = getCustomerInvoiceCompleteness(selectedCustomer);
 
     // Calculate invoice totals
     const netTotal = lineItems.reduce((sum, item) => sum + item.total, 0);
@@ -223,6 +249,33 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                     )}
                 />
 
+                {selectedCustomer && !customerComplete && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                    Kundendaten unvollständig für Rechnungserstellung
+                                </p>
+                                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                    Folgende Angaben fehlen: {missingFields.join(", ")}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3 border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900/50"
+                                    asChild
+                                >
+                                    <Link href={`/customers/${selectedCustomer.id}`}>
+                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                        Kundendaten vervollständigen
+                                    </Link>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <FormField
                     control={form.control}
                     name="lineItems"
@@ -233,6 +286,11 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                                 <LineItemsEditor
                                     lineItems={field.value}
                                     onChange={field.onChange}
+                                    disabled={!customerComplete}
+                                    disabledMessage={!selectedCustomer
+                                        ? "Bitte wählen Sie zuerst einen Kunden aus."
+                                        : "Bitte vervollständigen Sie zuerst die Kundendaten (Krankenkasse), um Positionen hinzuzufügen."
+                                    }
                                 />
                             </FormControl>
                             <FormMessage />
@@ -268,7 +326,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                     <Button type="button" variant="outline" onClick={() => router.push("/invoices")}>
                         Abbrechen
                     </Button>
-                    <Button type="submit" disabled={isPending}>
+                    <Button type="submit" disabled={isPending || !customerComplete}>
                         {isPending ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

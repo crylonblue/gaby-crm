@@ -14,13 +14,14 @@ import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
 
 interface MobileInvoiceListProps {
     invoices: Invoice[];
+    emptyMessage?: string;
 }
 
-export function MobileInvoiceList({ invoices }: MobileInvoiceListProps) {
+export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen vorhanden." }: MobileInvoiceListProps) {
     if (invoices.length === 0) {
         return (
             <div className="text-center p-8 border rounded-md text-muted-foreground">
-                Keine Rechnungen vorhanden.
+                {emptyMessage}
             </div>
         );
     }
