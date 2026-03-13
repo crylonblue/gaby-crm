@@ -36,8 +36,8 @@ const templateSchema = z.object({
     name: z.string().min(1, "Name ist erforderlich"),
     description: z.string().optional(),
     unit: z.string().min(1, "Einheit ist erforderlich"),
-    unitPrice: z.coerce.number().min(0, "Preis muss positiv sein"),
-    defaultVatRate: z.coerce.number().min(0).max(100, "MwSt. muss zwischen 0 und 100 sein"),
+    unitPrice: z.number().min(0, "Preis muss positiv sein"),
+    defaultVatRate: z.number().min(0).max(100, "MwSt. muss zwischen 0 und 100 sein"),
 });
 
 type TemplateFormValues = z.infer<typeof templateSchema>;
@@ -175,7 +175,11 @@ export function TemplateModal({ open, onOpenChange, template, onSelect }: Templa
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
-                                                {...field}
+                                                value={field.value}
+                                                onChange={(e) => {
+                                                    const num = e.target.valueAsNumber;
+                                                    field.onChange(Number.isNaN(num) ? 0 : num);
+                                                }}
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -254,7 +258,11 @@ export function TemplateModal({ open, onOpenChange, template, onSelect }: Templa
                                             step="0.01"
                                             min="0"
                                             max="100"
-                                            {...field}
+                                            value={field.value}
+                                            onChange={(e) => {
+                                                const num = e.target.valueAsNumber;
+                                                field.onChange(Number.isNaN(num) ? 0 : num);
+                                            }}
                                         />
                                     </FormControl>
                                     <FormMessage />
