@@ -36,8 +36,8 @@ const templateSchema = z.object({
     name: z.string().min(1, "Name ist erforderlich"),
     description: z.string().optional(),
     unit: z.string().min(1, "Einheit ist erforderlich"),
-    unitPrice: z.number().min(0, "Preis muss positiv sein"),
-    defaultVatRate: z.number().min(0).max(100, "MwSt. muss zwischen 0 und 100 sein"),
+    unitPrice: z.coerce.number().min(0, "Preis muss positiv sein"),
+    defaultVatRate: z.coerce.number().min(0).max(100, "MwSt. muss zwischen 0 und 100 sein"),
 });
 
 type TemplateFormValues = z.infer<typeof templateSchema>;
