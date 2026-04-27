@@ -142,18 +142,16 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                             </Link>
                                                         </Button>
                                                     )}
-                                                    {!invoice.sentAt && !invoice.queuedForSending && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            asChild
-                                                            title="Rechnung bearbeiten"
-                                                        >
-                                                            <Link href={`/invoices/${invoice.id}/edit`}>
-                                                                <Pencil className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        asChild
+                                                        title="Rechnung bearbeiten"
+                                                    >
+                                                        <Link href={`/invoices/${invoice.id}/edit`}>
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
                                                     <SendInvoiceDialog
                                                         invoiceId={invoice.id}
                                                         customerId={invoice.customerId}

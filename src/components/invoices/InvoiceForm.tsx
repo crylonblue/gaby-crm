@@ -143,9 +143,15 @@ export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
 
             const invoiceData: NewInvoice = {
                 customerId: selectedCustomer.id,
-                status: "offen",
+                status: invoice?.status ?? "offen",
                 date: invoice?.date ?? new Date().toISOString(),
                 createdAt: invoice?.createdAt ?? new Date().toISOString(),
+                paid: invoice?.paid ?? false,
+                sentAt: invoice?.sentAt ?? null,
+                queuedForSending: invoice?.queuedForSending ?? false,
+                invoiceNumber: invoice?.invoiceNumber ?? null,
+                invoicePdfUrl: invoice?.invoicePdfUrl ?? null,
+                xrechnungXmlUrl: invoice?.xrechnungXmlUrl ?? null,
 
                 // Snapshot Data
                 lastName: selectedCustomer.lastName,

@@ -211,11 +211,6 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
 
         const inv = existing[0]!;
 
-        // Guard: do not allow editing once sending is queued or already sent
-        if (inv.queuedForSending || inv.sentAt) {
-            return { success: false, error: "Gesendete Rechnungen können nicht mehr bearbeitet werden." };
-        }
-
         const oldYear = new Date(inv.date).getFullYear();
         const newDate = data.date ?? inv.date;
         const newYear = new Date(newDate).getFullYear();
