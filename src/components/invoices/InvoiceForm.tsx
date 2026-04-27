@@ -12,9 +12,9 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { createInvoice } from "@/lib/actions/invoice.actions";
+import { createInvoice, updateInvoice } from "@/lib/actions/invoice.actions";
 import { toast } from "sonner";
-import { Customer } from "@/db/schema";
+import { Customer, Invoice, NewInvoice } from "@/db/schema";
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -76,9 +76,21 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface InvoiceFormProps {
     customers: (Customer & { yearlyBudget?: number })[];
+    invoice?: Invoice | null;
 }
 
-export function InvoiceForm({ customers }: InvoiceFormProps) {
+function safeParseLineItemsJson(lineItemsJson: string | null): LineItem[] {
+    if (!lineItemsJson) return [];
+    try {
+        const parsed = JSON.parse(lineItemsJson);
+        if (!Array.isArray(parsed)) return [];
+        return parsed as LineItem[];
+    } catch {
+        return [];
+    }
+}
+
+export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -86,8 +98,8 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceSchema),
         defaultValues: {
-            customerId: "",
-            lineItems: [],
+            customerId: invoice ? invoice.customerId.toString() : "",
+            lineItems: invoice ? safeParseLineItemsJson(invoice.lineItemsJson) : [],
         },
     });
 
@@ -129,11 +141,11 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
             const hoursItem = data.lineItems.find(item => item.unit === "hour");
             const kmItem = data.lineItems.find(item => item.unit === "km");
 
-            const invoiceData = {
+            const invoiceData: NewInvoice = {
                 customerId: selectedCustomer.id,
                 status: "offen",
-                date: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
+                date: invoice?.date ?? new Date().toISOString(),
+                createdAt: invoice?.createdAt ?? new Date().toISOString(),
 
                 // Snapshot Data
                 lastName: selectedCustomer.lastName,
@@ -165,9 +177,18 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                 lineItemsJson: JSON.stringify(data.lineItems),
             };
 
-            // @ts-ignore
-            const result = await createInvoice(invoiceData as any);
+            if (invoice) {
+                const result = await updateInvoice(invoice.id, invoiceData);
+                if (result.success) {
+                    toast.success("Rechnung aktualisiert");
+                    router.push("/invoices");
+                } else {
+                    toast.error(result.error || "Fehler beim Aktualisieren");
+                }
+                return;
+            }
 
+            const result = await createInvoice(invoiceData);
             if (result.success) {
                 toast.success("Rechnung erstellt");
                 router.push("/invoices");
@@ -193,6 +214,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={open}
+                                            disabled={!!invoice}
                                             className={cn(
                                                 "w-full justify-between",
                                                 !field.value && "text-muted-foreground"
@@ -333,7 +355,7 @@ export function InvoiceForm({ customers }: InvoiceFormProps) {
                                 Speichern...
                             </>
                         ) : (
-                            "Rechnung erstellen"
+                            invoice ? "Rechnung aktualisieren" : "Rechnung erstellen"
                         )}
                     </Button>
                 </div>

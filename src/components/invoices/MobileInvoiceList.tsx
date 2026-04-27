@@ -4,7 +4,7 @@ import { Invoice } from "@/db/schema";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Check } from "lucide-react";
+import { Eye, Check, Pencil } from "lucide-react";
 import Link from "next/link";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
@@ -99,6 +99,13 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                         rel="noopener noreferrer"
                                     >
                                         <Eye className="h-4 w-4 mr-2" /> Anzeigen
+                                    </Link>
+                                </Button>
+                            )}
+                            {!invoice.sentAt && !invoice.queuedForSending && (
+                                <Button variant="outline" size="sm" asChild className="border">
+                                    <Link href={`/invoices/${invoice.id}/edit`}>
+                                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
                                     </Link>
                                 </Button>
                             )}
