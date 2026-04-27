@@ -1,4 +1,5 @@
 import { getCustomer } from "@/lib/actions/customer.actions";
+import { getSentInvoicesForCustomer } from "@/lib/actions/invoice.actions";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,10 +8,16 @@ import { Edit, Phone, Mail, MapPin, Calendar, FileText, HeartPulse, User, Euro }
 import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 import { Badge } from "@/components/ui/badge";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
+import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
+import { getGoogleDriveViewerUrl } from "@/lib/utils";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const customer = await getCustomer(parseInt(id));
+    const customerId = parseInt(id);
+    const [customer, sentInvoices] = await Promise.all([
+        getCustomer(customerId),
+        getSentInvoicesForCustomer(customerId),
+    ]);
 
     if (!customer) {
         notFound();
@@ -53,6 +60,61 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Sent invoices */}
+                <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" /> Verschickte Rechnungen
+                        </CardTitle>
+                        <CardDescription>
+                            Alle Rechnungen, die bereits verschickt wurden (mit Versanddatum).
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {sentInvoices.length === 0 ? (
+                            <p className="text-muted-foreground italic">Noch keine Rechnungen verschickt.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {sentInvoices.map((inv) => {
+                                    const gross = calculateInvoiceGrossAmount(inv);
+                                    return (
+                                        <div key={inv.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-3 border rounded-md">
+                                            <div className="min-w-0">
+                                                <div className="font-medium truncate">
+                                                    {inv.invoiceNumber ? `Rechnung ${inv.invoiceNumber}` : `Rechnung #${inv.id}`}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    Datum: {new Date(inv.date).toLocaleDateString("de-DE")} · Gesendet am:{" "}
+                                                    {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString("de-DE") : "-"}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <Badge variant="outline">
+                                                    {gross.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                                                </Badge>
+                                                {inv.invoicePdfUrl && (
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <a
+                                                            href={getGoogleDriveViewerUrl(inv.invoicePdfUrl)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
+                                                            PDF ansehen
+                                                        </a>
+                                                    </Button>
+                                                )}
+                                                <Button size="sm" variant="secondary" asChild>
+                                                    <Link href={`/invoices/${inv.id}/edit`}>Öffnen</Link>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
                 {/* Contact Info */}
                 <Card>
                     <CardHeader>

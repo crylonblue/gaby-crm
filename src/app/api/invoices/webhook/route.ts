@@ -1,7 +1,44 @@
 import { db } from "@/db";
-import { invoices } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { customerBudgets, invoices } from "@/db/schema";
+import { and, eq, isNotNull, like } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
+
+async function upsertCustomerBudgetAmount(params: { customerId: number; year: number; amount: number }) {
+    const existingBudget = await db.select().from(customerBudgets).where(
+        and(
+            eq(customerBudgets.customerId, params.customerId),
+            eq(customerBudgets.year, params.year)
+        )
+    );
+
+    if (existingBudget.length > 0) {
+        await db.update(customerBudgets)
+            .set({ amount: params.amount })
+            .where(eq(customerBudgets.id, existingBudget[0]!.id));
+        return;
+    }
+
+    await db.insert(customerBudgets).values({
+        customerId: params.customerId,
+        year: params.year,
+        amount: params.amount,
+    });
+}
+
+async function recalcCustomerBudgetFromInvoices(params: { customerId: number; year: number }) {
+    const pattern = `${params.year}-%`;
+    const invs = await db.select().from(invoices).where(
+        and(
+            eq(invoices.customerId, params.customerId),
+            like(invoices.date, pattern),
+            isNotNull(invoices.sentAt)
+        )
+    );
+
+    const total = invs.reduce((acc, inv) => acc + calculateInvoiceGrossAmount(inv), 0);
+    await upsertCustomerBudgetAmount({ customerId: params.customerId, year: params.year, amount: total });
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -12,8 +49,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing required field: id" }, { status: 400 });
         }
 
-        // Get current invoice to preserve paid status
-        const currentInvoice = await db.select({ status: invoices.status })
+        // Get current invoice to preserve paid status and compute budget after updates
+        const currentInvoice = await db.select({ status: invoices.status, customerId: invoices.customerId, date: invoices.date })
             .from(invoices)
             .where(eq(invoices.id, id))
             .limit(1);
@@ -60,6 +97,11 @@ export async function POST(request: NextRequest) {
         await db.update(invoices)
             .set(updateData)
             .where(eq(invoices.id, id));
+
+        // Keep derived "Abgerechnet" (customer budget) consistent after send/queue events.
+        // We only count invoices that have actually been sent (sentAt not null).
+        const year = new Date(currentInvoice[0]!.date).getFullYear();
+        await recalcCustomerBudgetFromInvoices({ customerId: currentInvoice[0]!.customerId, year });
 
         return NextResponse.json({ success: true, message: "Invoice updated" });
 

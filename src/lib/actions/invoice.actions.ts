@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { invoices, NewInvoice, customerBudgets, customers } from "@/db/schema";
-import { desc, eq, and, like } from "drizzle-orm";
+import { desc, eq, and, like, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generateInvoicePDF } from "../../../lib/pdf-generator";
 import { uploadToS3, uploadXRechnungXmlToS3 } from "../../../lib/s3";
@@ -37,12 +37,28 @@ async function recalcCustomerBudgetFromInvoices(params: { customerId: number; ye
     const invs = await db.select().from(invoices).where(
         and(
             eq(invoices.customerId, params.customerId),
-            like(invoices.date, pattern)
+            like(invoices.date, pattern),
+            // "Abgerechnet" means actually sent to the recipient.
+            isNotNull(invoices.sentAt)
         )
     );
 
     const total = invs.reduce((acc, inv) => acc + calculateInvoiceGrossAmount(inv), 0);
     await upsertCustomerBudgetAmount({ customerId: params.customerId, year: params.year, amount: total });
+}
+
+export async function getSentInvoicesForCustomer(customerId: number) {
+    try {
+        const result = await db
+            .select()
+            .from(invoices)
+            .where(and(eq(invoices.customerId, customerId), isNotNull(invoices.sentAt)))
+            .orderBy(desc(invoices.sentAt));
+        return result;
+    } catch (error) {
+        console.error("Error fetching sent invoices for customer:", error);
+        return [];
+    }
 }
 
 export async function createInvoice(data: NewInvoice) {
