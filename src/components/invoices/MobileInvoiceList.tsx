@@ -102,13 +102,11 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                     </Link>
                                 </Button>
                             )}
-                            {!invoice.sentAt && !invoice.queuedForSending && (
-                                <Button variant="outline" size="sm" asChild className="border">
-                                    <Link href={`/invoices/${invoice.id}/edit`}>
-                                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
-                                    </Link>
-                                </Button>
-                            )}
+                            <Button variant="outline" size="sm" asChild className="border">
+                                <Link href={`/invoices/${invoice.id}/edit`}>
+                                    <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                                </Link>
+                            </Button>
                             <SendInvoiceDialog 
                                 invoiceId={invoice.id} 
                                 customerId={invoice.customerId} 
