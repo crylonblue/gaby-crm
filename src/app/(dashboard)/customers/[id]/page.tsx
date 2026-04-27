@@ -18,6 +18,16 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         getCustomer(customerId),
         getSentInvoicesForCustomer(customerId),
     ]);
+    const currentYear = new Date().getFullYear();
+    const billedThisYear = sentInvoices
+        .filter((inv) => {
+            try {
+                return new Date(inv.date).getFullYear() === currentYear;
+            } catch {
+                return false;
+            }
+        })
+        .reduce((acc, inv) => acc + calculateInvoiceGrossAmount(inv), 0);
 
     if (!customer) {
         notFound();
@@ -41,7 +51,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-sm py-1 px-3 border-emerald-500/50 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                             <Euro className="h-3 w-3 mr-1" />
-                            Abgerechnet ({new Date().getFullYear()}): {(customer as any).yearlyBudget?.toLocaleString("de-DE", { style: "currency", currency: "EUR" }) || "0,00 €"}
+                            Abgerechnet ({currentYear}): {billedThisYear.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                         </Badge>
                     </div>
                 </div>

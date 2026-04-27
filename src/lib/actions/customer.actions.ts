@@ -1,24 +1,33 @@
 "use server";
 
 import { db } from "@/db";
-import { customers, NewCustomer, customerBudgets } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { customers, NewCustomer, invoices } from "@/db/schema";
+import { eq, desc, and, like, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { calculateInvoiceGrossAmount } from "../invoice-utils";
+
+async function getYearlyBilledAmountFromInvoices(params: { customerId: number; year: number }): Promise<number> {
+    const pattern = `${params.year}-%`;
+    const invs = await db.select().from(invoices).where(
+        and(
+            eq(invoices.customerId, params.customerId),
+            like(invoices.date, pattern),
+            isNotNull(invoices.sentAt)
+        )
+    );
+
+    return invs.reduce((acc, inv) => acc + calculateInvoiceGrossAmount(inv), 0);
+}
 
 export async function getCustomers() {
     const allCustomers = await db.select().from(customers).orderBy(desc(customers.id));
     const currentYear = new Date().getFullYear();
 
     const customersWithBudget = await Promise.all(allCustomers.map(async (customer) => {
-        const budget = await db.select().from(customerBudgets).where(
-            and(
-                eq(customerBudgets.customerId, customer.id),
-                eq(customerBudgets.year, currentYear)
-            )
-        );
+        const yearlyBudget = await getYearlyBilledAmountFromInvoices({ customerId: customer.id, year: currentYear });
         return {
             ...customer,
-            yearlyBudget: budget.length > 0 ? budget[0].amount : 0,
+            yearlyBudget,
         };
     }));
 
@@ -31,16 +40,11 @@ export async function getCustomer(id: number) {
     if (data.length === 0) return null;
 
     const currentYear = new Date().getFullYear();
-    const budget = await db.select().from(customerBudgets).where(
-        and(
-            eq(customerBudgets.customerId, id),
-            eq(customerBudgets.year, currentYear)
-        )
-    );
+    const yearlyBudget = await getYearlyBilledAmountFromInvoices({ customerId: id, year: currentYear });
 
     return {
         ...data[0],
-        yearlyBudget: budget.length > 0 ? budget[0].amount : 0,
+        yearlyBudget,
     };
 }
 
