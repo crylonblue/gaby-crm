@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { invoices, NewInvoice, customerBudgets, customers } from "@/db/schema";
-import { desc, eq, and, gte, lte, ne, sql, like } from "drizzle-orm";
+import { desc, eq, and, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generateInvoicePDF } from "../../../lib/pdf-generator";
 import { uploadToS3, uploadXRechnungXmlToS3 } from "../../../lib/s3";
@@ -10,10 +10,43 @@ import { generateXRechnungXML } from "../../../lib/zugferd-generator";
 import { generateInvoiceNumber, mapDbInvoiceToInvoice } from "../invoice-helpers";
 import { calculateInvoiceGrossAmount } from "../invoice-utils";
 
+async function upsertCustomerBudgetAmount(params: { customerId: number; year: number; amount: number }) {
+    const existingBudget = await db.select().from(customerBudgets).where(
+        and(
+            eq(customerBudgets.customerId, params.customerId),
+            eq(customerBudgets.year, params.year)
+        )
+    );
+
+    if (existingBudget.length > 0) {
+        await db.update(customerBudgets)
+            .set({ amount: params.amount })
+            .where(eq(customerBudgets.id, existingBudget[0]!.id));
+        return;
+    }
+
+    await db.insert(customerBudgets).values({
+        customerId: params.customerId,
+        year: params.year,
+        amount: params.amount,
+    });
+}
+
+async function recalcCustomerBudgetFromInvoices(params: { customerId: number; year: number }) {
+    const pattern = `${params.year}-%`;
+    const invs = await db.select().from(invoices).where(
+        and(
+            eq(invoices.customerId, params.customerId),
+            like(invoices.date, pattern)
+        )
+    );
+
+    const total = invs.reduce((acc, inv) => acc + calculateInvoiceGrossAmount(inv), 0);
+    await upsertCustomerBudgetAmount({ customerId: params.customerId, year: params.year, amount: total });
+}
+
 export async function createInvoice(data: NewInvoice) {
     let invoiceId: number | null = null;
-    let budgetUpdated = false;
-    let budgetId: number | null = null;
     
     try {
         // Generate invoice number if not provided
@@ -43,31 +76,8 @@ export async function createInvoice(data: NewInvoice) {
 
         console.log("Invoice created with ID:", invoiceId);
 
-        // Update Customer Budget - use accurate calculation from line items if available
-        const amount = calculateInvoiceGrossAmount(data);
         const year = new Date(data.date).getFullYear();
-
-        const existingBudget = await db.select().from(customerBudgets).where(
-            and(
-                eq(customerBudgets.customerId, data.customerId),
-                eq(customerBudgets.year, year)
-            )
-        );
-
-        if (existingBudget.length > 0) {
-            budgetId = existingBudget[0].id;
-            await db.update(customerBudgets)
-                .set({ amount: sql`${customerBudgets.amount} + ${amount}` })
-                .where(eq(customerBudgets.id, budgetId));
-            budgetUpdated = true;
-        } else {
-            const newBudget = await db.insert(customerBudgets).values({
-                customerId: data.customerId,
-                year: year,
-                amount: amount,
-            });
-            budgetUpdated = true;
-        }
+        await recalcCustomerBudgetFromInvoices({ customerId: data.customerId, year });
 
         // Generate PDF and upload to S3 - REQUIRED
         // Skip only if explicitly disabled via env var (for testing)
@@ -132,7 +142,7 @@ export async function createInvoice(data: NewInvoice) {
 
         revalidatePath("/invoices");
         return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error creating invoice:", error);
         
         // Rollback: Delete invoice and revert budget if they were created
@@ -145,44 +155,28 @@ export async function createInvoice(data: NewInvoice) {
             }
         }
 
-        if (budgetUpdated && data.customerId) {
-            try {
-                const amount = calculateInvoiceGrossAmount(data);
-                const year = new Date(data.date).getFullYear();
-                
-                if (budgetId) {
-                    // Revert budget update
-                    await db.update(customerBudgets)
-                        .set({ amount: sql`${customerBudgets.amount} - ${amount}` })
-                        .where(eq(customerBudgets.id, budgetId));
-                } else {
-                    // Delete newly created budget
-                    await db.delete(customerBudgets).where(
-                        and(
-                            eq(customerBudgets.customerId, data.customerId),
-                            eq(customerBudgets.year, year)
-                        )
-                    );
-                }
-                console.log("Rolled back budget update due to PDF/S3 error");
-            } catch (rollbackError) {
-                console.error("Error rolling back budget:", rollbackError);
-            }
+        // Budget is derived from invoices; after rollback just recalc.
+        try {
+            const year = new Date(data.date).getFullYear();
+            await recalcCustomerBudgetFromInvoices({ customerId: data.customerId, year });
+        } catch (rollbackBudgetError) {
+            console.error("Error recalculating budget after rollback:", rollbackBudgetError);
         }
 
         // Return user-friendly error message
         let errorMessage = "Fehler beim Erstellen der Rechnung";
         
-        if (error?.Code === 'AccessDenied') {
+        if (typeof error === "object" && error !== null && "Code" in error && (error as { Code?: unknown }).Code === "AccessDenied") {
             errorMessage = "Fehler beim Hochladen der PDF-Datei. Bitte überprüfen Sie die S3-Konfiguration.";
-        } else if (error?.message) {
+        } else if (typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string") {
             // Check if it's an S3 error
-            if (error.message.includes('Access Denied') || error.message.includes('S3')) {
+            const msg = (error as { message: string }).message;
+            if (msg.includes('Access Denied') || msg.includes('S3')) {
                 errorMessage = "Fehler beim Hochladen der PDF-Datei. Bitte überprüfen Sie die S3-Konfiguration.";
-            } else if (error.message.includes('PDF') || error.message.includes('generate')) {
+            } else if (msg.includes('PDF') || msg.includes('generate')) {
                 errorMessage = "Fehler beim Generieren der PDF-Datei. Bitte versuchen Sie es erneut.";
             } else {
-                errorMessage = error.message;
+                errorMessage = msg;
             }
         }
 
@@ -200,26 +194,112 @@ export async function getInvoices() {
     }
 }
 
+export async function getInvoice(id: number) {
+    try {
+        const result = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+        return result[0] ?? null;
+    } catch (error) {
+        console.error("Error fetching invoice:", error);
+        return null;
+    }
+}
+
+export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
+    try {
+        const existing = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+        if (existing.length === 0) return { success: false, error: "Rechnung nicht gefunden" };
+
+        const inv = existing[0]!;
+
+        // Guard: do not allow editing once sending is queued or already sent
+        if (inv.queuedForSending || inv.sentAt) {
+            return { success: false, error: "Gesendete Rechnungen können nicht mehr bearbeitet werden." };
+        }
+
+        const oldYear = new Date(inv.date).getFullYear();
+        const newDate = data.date ?? inv.date;
+        const newYear = new Date(newDate).getFullYear();
+
+        await db.update(invoices)
+            .set({
+                ...data,
+                date: newDate,
+            })
+            .where(eq(invoices.id, id));
+
+        // Re-generate PDF & XRechnung if enabled and invoice number exists (or can be generated)
+        const skipS3Upload = process.env.SKIP_S3_UPLOAD === 'true';
+        if (!skipS3Upload) {
+            const refreshed = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+            const updatedInv = refreshed[0];
+            if (updatedInv) {
+                const invoiceNumber = updatedInv.invoiceNumber || await generateInvoiceNumber(updatedInv.date);
+                if (!updatedInv.invoiceNumber) {
+                    await db.update(invoices).set({ invoiceNumber }).where(eq(invoices.id, id));
+                    updatedInv.invoiceNumber = invoiceNumber;
+                }
+
+                const invoiceForPdf = await mapDbInvoiceToInvoice(updatedInv, invoiceNumber);
+                const pdfBuffer = await generateInvoicePDF(invoiceForPdf, 'de');
+
+                const userId = "default";
+                const fileName = `invoice-${invoiceNumber}.pdf`;
+                const pdfUrl = await uploadToS3(
+                    userId,
+                    id.toString(),
+                    fileName,
+                    pdfBuffer,
+                    "application/pdf"
+                );
+
+                let xrechnungXmlUrl: string | null = null;
+                try {
+                    const xmlContent = await generateXRechnungXML(invoiceForPdf);
+                    xrechnungXmlUrl = await uploadXRechnungXmlToS3(
+                        userId,
+                        id.toString(),
+                        xmlContent
+                    );
+                } catch (xmlError) {
+                    console.error("Error generating XRechnung XML (continuing without it):", xmlError);
+                }
+
+                await db.update(invoices)
+                    .set({
+                        invoicePdfUrl: pdfUrl,
+                        xrechnungXmlUrl,
+                    })
+                    .where(eq(invoices.id, id));
+            }
+        }
+
+        // Budget is derived; always recalc after update (handles old bugs too)
+        await recalcCustomerBudgetFromInvoices({ customerId: inv.customerId, year: oldYear });
+        if (newYear !== oldYear) {
+            await recalcCustomerBudgetFromInvoices({ customerId: inv.customerId, year: newYear });
+        }
+
+        revalidatePath("/invoices");
+        revalidatePath(`/invoices/${id}/edit`);
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating invoice:", error);
+        return { success: false, error: "Fehler beim Aktualisieren der Rechnung" };
+    }
+}
+
 export async function deleteInvoice(id: number) {
     try {
         const invoice = await db.select().from(invoices).where(eq(invoices.id, id));
         if (invoice.length === 0) return { success: false, error: "Rechnung nicht gefunden" };
 
         const inv = invoice[0];
-        const amount = calculateInvoiceGrossAmount(inv);
         const year = new Date(inv.date).getFullYear();
 
         await db.delete(invoices).where(eq(invoices.id, id));
 
-        // Decrement Budget
-        await db.update(customerBudgets)
-            .set({ amount: sql`${customerBudgets.amount} - ${amount}` })
-            .where(
-                and(
-                    eq(customerBudgets.customerId, inv.customerId),
-                    eq(customerBudgets.year, year)
-                )
-            );
+        // Budget is derived from invoices; recalc guarantees correctness (also fixes previously wrong budgets)
+        await recalcCustomerBudgetFromInvoices({ customerId: inv.customerId, year });
 
         revalidatePath("/invoices");
         return { success: true };

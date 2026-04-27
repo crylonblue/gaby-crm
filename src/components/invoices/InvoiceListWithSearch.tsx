@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Search, Eye, Check } from "lucide-react";
+import { Search, Eye, Check, Pencil } from "lucide-react";
 import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
@@ -139,6 +139,18 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                                 rel="noopener noreferrer"
                                                             >
                                                                 <Eye className="h-4 w-4 text-blue-600" />
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                                    {!invoice.sentAt && !invoice.queuedForSending && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            asChild
+                                                            title="Rechnung bearbeiten"
+                                                        >
+                                                            <Link href={`/invoices/${invoice.id}/edit`}>
+                                                                <Pencil className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                     )}
