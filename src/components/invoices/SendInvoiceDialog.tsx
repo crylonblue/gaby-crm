@@ -52,9 +52,12 @@ export function SendInvoiceDialog({ invoiceId, customerId, invoiceNumber, custom
                 setLoadingCustomer(false);
             });
             // Set default values when opening
-            const defaultSubject = insuranceNumber 
+            const baseSubject = insuranceNumber 
                 ? `${insuranceNumber}: Rechnung für die Verhinderungspflege` 
                 : "Rechnung für die Verhinderungspflege";
+            const subjectWithInvoiceNumber = invoiceNumber
+                ? `Rechnung ${invoiceNumber} – ${baseSubject}`
+                : baseSubject;
             const defaultBody = `Guten Tag,
 
 Bitte überweisen Sie die Rechnung für die Verhinderungspflege von Frau/Herrn ${customerLastName || ""} auf mein Konto. Die Abtretungserklärung liegt bereits vor.
@@ -67,7 +70,7 @@ Seniorenassistenz
 Holmer Weg 14
 21244 Buchholz
 0171/3850187`;
-            setEmailSubject(defaultSubject);
+            setEmailSubject(subjectWithInvoiceNumber);
             setEmailBody(defaultBody);
         } else if (!open) {
             // Reset form when dialog closes
@@ -79,7 +82,7 @@ Holmer Weg 14
             setEmailSubject("");
             setEmailBody("");
         }
-    }, [open, customerId, customerLastName, insuranceNumber]);
+    }, [open, customerId, customerLastName, insuranceNumber, invoiceNumber]);
 
     const handleUseInsuranceEmailChange = (checked: boolean) => {
         setUseInsuranceEmail(checked);
@@ -102,11 +105,19 @@ Holmer Weg 14
         }
 
         startTransition(async () => {
+            // Ensure the subject always contains the invoice number when available
+            let subjectToSend = emailSubject.trim();
+            if (invoiceNumber && !subjectToSend.includes(invoiceNumber)) {
+                subjectToSend = subjectToSend
+                    ? `Rechnung ${invoiceNumber} – ${subjectToSend}`
+                    : `Rechnung ${invoiceNumber} – Rechnung für die Verhinderungspflege`;
+            }
+
             const result = await sendInvoice({
                 invoiceId,
                 email,
                 attachAbtretungserklaerung: hasAbtretungserklaerung ? attachAbtretungserklaerung : false,
-                emailSubject: emailSubject.trim(),
+                emailSubject: subjectToSend,
                 emailBody: emailBody.trim(),
             });
 
