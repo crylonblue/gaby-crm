@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { invoices, NewInvoice, customerBudgets, customers } from "@/db/schema";
-import { desc, eq, and, like, isNotNull } from "drizzle-orm";
+import { invoices, NewInvoice, Invoice, customerBudgets, customers } from "@/db/schema";
+import { desc, eq, and, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generateInvoicePDF } from "../../../lib/pdf-generator";
 import { uploadToS3, uploadXRechnungXmlToS3 } from "../../../lib/s3";
@@ -34,12 +34,11 @@ async function upsertCustomerBudgetAmount(params: { customerId: number; year: nu
 
 async function recalcCustomerBudgetFromInvoices(params: { customerId: number; year: number }) {
     const pattern = `${params.year}-%`;
+    // Budget consists of ALL created invoices for the year (not only the ones that were sent).
     const invs = await db.select().from(invoices).where(
         and(
             eq(invoices.customerId, params.customerId),
-            like(invoices.date, pattern),
-            // "Abgerechnet" means actually sent to the recipient.
-            isNotNull(invoices.sentAt)
+            like(invoices.date, pattern)
         )
     );
 
@@ -47,16 +46,16 @@ async function recalcCustomerBudgetFromInvoices(params: { customerId: number; ye
     await upsertCustomerBudgetAmount({ customerId: params.customerId, year: params.year, amount: total });
 }
 
-export async function getSentInvoicesForCustomer(customerId: number) {
+export async function getInvoicesForCustomer(customerId: number) {
     try {
         const result = await db
             .select()
             .from(invoices)
-            .where(and(eq(invoices.customerId, customerId), isNotNull(invoices.sentAt)))
-            .orderBy(desc(invoices.sentAt));
+            .where(eq(invoices.customerId, customerId))
+            .orderBy(desc(invoices.date));
         return result;
     } catch (error) {
-        console.error("Error fetching sent invoices for customer:", error);
+        console.error("Error fetching invoices for customer:", error);
         return [];
     }
 }
@@ -227,6 +226,10 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
 
         const inv = existing[0]!;
 
+        if (inv.status === "storniert") {
+            return { success: false, error: "Stornierte Rechnungen können nicht bearbeitet werden." };
+        }
+
         const oldYear = new Date(inv.date).getFullYear();
         const newDate = data.date ?? inv.date;
         const newYear = new Date(newDate).getFullYear();
@@ -299,24 +302,159 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
     }
 }
 
-export async function deleteInvoice(id: number) {
+/**
+ * Builds the line items for a Storno (reversal) invoice by negating the original positions,
+ * so the Storno amounts cancel out the original. Returns a lineItemsJson string.
+ */
+function buildStornoLineItemsJson(original: Invoice): string {
+    if (original.lineItemsJson) {
+        try {
+            const items = JSON.parse(original.lineItemsJson);
+            if (Array.isArray(items) && items.length > 0) {
+                return JSON.stringify(
+                    items.map((item: { quantity: number; [key: string]: unknown }) => ({
+                        ...item,
+                        quantity: -Math.abs(Number(item.quantity) || 0),
+                    }))
+                );
+            }
+        } catch (error) {
+            console.error("Error parsing lineItemsJson for Storno:", error);
+        }
+    }
+
+    // Legacy fallback: reconstruct positions from hours/km and negate them.
+    const items: Array<{ description: string; quantity: number; unit: string; unitPrice: number; vatRate: number }> = [];
+    if (original.hours > 0) {
+        items.push({ description: original.description, quantity: -original.hours, unit: "hour", unitPrice: original.ratePerHour, vatRate: 19 });
+    }
+    if (original.km > 0) {
+        items.push({ description: "Fahrtkosten", quantity: -original.km, unit: "km", unitPrice: original.ratePerKm, vatRate: 19 });
+    }
+    if (items.length === 0) {
+        items.push({ description: original.description, quantity: -1, unit: "piece", unitPrice: 0, vatRate: 19 });
+    }
+    return JSON.stringify(items);
+}
+
+/**
+ * Cancels an invoice (Storno). Invoices are never deleted. Instead this creates a reversal
+ * invoice with negative amounts (its own sequential number, PDF + XRechnung) and sets the
+ * original invoice to status "storniert", linking the two. A storniert invoice is locked.
+ */
+export async function cancelInvoice(id: number) {
+    let stornoId: number | null = null;
     try {
-        const invoice = await db.select().from(invoices).where(eq(invoices.id, id));
-        if (invoice.length === 0) return { success: false, error: "Rechnung nicht gefunden" };
+        const existingRows = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+        if (existingRows.length === 0) return { success: false, error: "Rechnung nicht gefunden" };
+        const original = existingRows[0]!;
 
-        const inv = invoice[0];
-        const year = new Date(inv.date).getFullYear();
+        if (original.status === "storniert" || original.cancelledByInvoiceId || original.cancelsInvoiceId) {
+            return { success: false, error: "Diese Rechnung ist bereits storniert und kann nicht erneut storniert werden." };
+        }
 
-        await db.delete(invoices).where(eq(invoices.id, id));
+        // The Storno is dated today (date of issuance) and gets its own sequential invoice number.
+        const stornoDate = new Date().toISOString().split("T")[0];
+        const stornoNumber = await generateInvoiceNumber(stornoDate);
+        const createdAt = new Date().toISOString();
+        const stornoDescription = `Storno zu Rechnung ${original.invoiceNumber ?? `#${original.id}`}`;
 
-        // Budget is derived from invoices; recalc guarantees correctness (also fixes previously wrong budgets)
-        await recalcCustomerBudgetFromInvoices({ customerId: inv.customerId, year });
+        const stornoData: NewInvoice = {
+            customerId: original.customerId,
+            status: "storniert",
+            date: stornoDate,
+            invoiceNumber: stornoNumber,
+            // Customer snapshot copied from the original invoice
+            lastName: original.lastName,
+            firstName: original.firstName,
+            healthInsurance: original.healthInsurance,
+            healthInsuranceStreet: original.healthInsuranceStreet,
+            healthInsuranceHouseNumber: original.healthInsuranceHouseNumber,
+            healthInsurancePostalCode: original.healthInsurancePostalCode,
+            healthInsuranceCity: original.healthInsuranceCity,
+            healthInsuranceCountry: original.healthInsuranceCountry,
+            insuranceNumber: original.insuranceNumber,
+            healthInsuranceEmail: original.healthInsuranceEmail,
+            birthDate: original.birthDate,
+            careLevel: original.careLevel,
+            street: original.street,
+            houseNumber: original.houseNumber,
+            postalCode: original.postalCode,
+            city: original.city,
+            invoiceEmail: original.invoiceEmail,
+            // Reversal amounts (negated positions live in lineItemsJson)
+            hours: 0,
+            description: stornoDescription,
+            ratePerHour: original.ratePerHour,
+            km: 0,
+            ratePerKm: original.ratePerKm,
+            lineItemsJson: buildStornoLineItemsJson(original),
+            createdAt,
+            paid: false,
+            queuedForSending: false,
+            cancelsInvoiceId: original.id,
+        };
+
+        await db.insert(invoices).values(stornoData);
+        const inserted = await db.select({ id: invoices.id })
+            .from(invoices)
+            .where(eq(invoices.createdAt, createdAt))
+            .orderBy(desc(invoices.id))
+            .limit(1);
+        stornoId = inserted[0]?.id ?? null;
+        if (!stornoId) throw new Error("Failed to get Storno invoice ID after insertion");
+
+        // Generate PDF + XRechnung for the Storno and upload to S3 (unless explicitly skipped).
+        const skipS3Upload = process.env.SKIP_S3_UPLOAD === "true";
+        if (!skipS3Upload) {
+            const stornoRows = await db.select().from(invoices).where(eq(invoices.id, stornoId)).limit(1);
+            const stornoInvoice = stornoRows[0]!;
+            const invoiceForPdf = await mapDbInvoiceToInvoice(stornoInvoice, stornoNumber);
+
+            const pdfBuffer = await generateInvoicePDF(invoiceForPdf, "de");
+            const userId = "default";
+            const pdfUrl = await uploadToS3(userId, stornoId.toString(), `invoice-${stornoNumber}.pdf`, pdfBuffer, "application/pdf");
+
+            let xrechnungXmlUrl: string | null = null;
+            try {
+                const xmlContent = await generateXRechnungXML(invoiceForPdf);
+                xrechnungXmlUrl = await uploadXRechnungXmlToS3(userId, stornoId.toString(), xmlContent);
+            } catch (xmlError) {
+                console.error("Error generating XRechnung XML for Storno (continuing without it):", xmlError);
+            }
+
+            await db.update(invoices)
+                .set({ invoicePdfUrl: pdfUrl, xrechnungXmlUrl })
+                .where(eq(invoices.id, stornoId));
+        }
+
+        // Lock the original: mark as storniert and link it to its Storno.
+        await db.update(invoices)
+            .set({ status: "storniert", cancelledByInvoiceId: stornoId })
+            .where(eq(invoices.id, original.id));
+
+        // Budget is derived from all created invoices; recalc affected years (original + Storno may differ).
+        const originalYear = new Date(original.date).getFullYear();
+        const stornoYear = new Date(stornoDate).getFullYear();
+        await recalcCustomerBudgetFromInvoices({ customerId: original.customerId, year: originalYear });
+        if (stornoYear !== originalYear) {
+            await recalcCustomerBudgetFromInvoices({ customerId: original.customerId, year: stornoYear });
+        }
 
         revalidatePath("/invoices");
-        return { success: true };
+        revalidatePath(`/customers/${original.customerId}`);
+        return { success: true, stornoInvoiceNumber: stornoNumber };
     } catch (error) {
-        console.error("Error deleting invoice:", error);
-        return { success: false, error: "Fehler beim Löschen der Rechnung" };
+        console.error("Error cancelling invoice:", error);
+        // Roll back the Storno if it was created but a later step failed.
+        if (stornoId) {
+            try {
+                await db.delete(invoices).where(eq(invoices.id, stornoId));
+            } catch (rollbackError) {
+                console.error("Error rolling back Storno invoice:", rollbackError);
+            }
+        }
+        return { success: false, error: "Fehler beim Stornieren der Rechnung" };
     }
 }
 
@@ -346,6 +484,10 @@ export async function toggleInvoicePaid(id: number) {
 
         if (invoice.length === 0) {
             return { success: false, error: "Rechnung nicht gefunden" };
+        }
+
+        if (invoice[0].status === "storniert") {
+            return { success: false, error: "Stornierte Rechnungen können nicht geändert werden." };
         }
 
         const currentPaid = invoice[0].paid;
@@ -382,6 +524,11 @@ export async function sendInvoice(data: {
         
         if (invoice.length === 0) {
             return { success: false, error: "Rechnung nicht gefunden" };
+        }
+
+        // A cancelled original invoice must not be re-sent (the Storno is the document to send instead).
+        if (invoice[0].cancelledByInvoiceId) {
+            return { success: false, error: "Eine stornierte Rechnung kann nicht versendet werden." };
         }
 
         // Get customer to get abtretungserklaerung URL if needed

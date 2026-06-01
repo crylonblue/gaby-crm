@@ -13,9 +13,13 @@ if (!url) {
 
 const client = createClient({ url, authToken: authToken || undefined });
 
+// Usage: npx tsx scripts/run-migration.ts [migration-file.sql]
+// Defaults to the latest cancellation migration if no argument is given.
+const migrationFile = process.argv[2] || "0012_add_invoice_cancellation.sql";
+
 async function run() {
   const sql = readFileSync(
-    join(__dirname, "../drizzle/0011_insurance_structured_address.sql"),
+    join(__dirname, "../drizzle", migrationFile),
     "utf-8"
   );
   const statements = sql

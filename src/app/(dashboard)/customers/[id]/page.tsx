@@ -1,5 +1,5 @@
 import { getCustomer } from "@/lib/actions/customer.actions";
-import { getSentInvoicesForCustomer } from "@/lib/actions/invoice.actions";
+import { getInvoicesForCustomer } from "@/lib/actions/invoice.actions";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,12 +14,12 @@ import { getGoogleDriveViewerUrl } from "@/lib/utils";
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const customerId = parseInt(id);
-    const [customer, sentInvoices] = await Promise.all([
+    const [customer, customerInvoices] = await Promise.all([
         getCustomer(customerId),
-        getSentInvoicesForCustomer(customerId),
+        getInvoicesForCustomer(customerId),
     ]);
     const currentYear = new Date().getFullYear();
-    const billedThisYear = sentInvoices
+    const billedThisYear = customerInvoices
         .filter((inv) => {
             try {
                 return new Date(inv.date).getFullYear() === currentYear;
@@ -70,22 +70,22 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Sent invoices */}
+                {/* Created invoices */}
                 <Card className="md:col-span-2">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" /> Verschickte Rechnungen
+                            <FileText className="h-5 w-5" /> Erstellte Rechnungen
                         </CardTitle>
                         <CardDescription>
-                            Alle Rechnungen, die bereits verschickt wurden (mit Versanddatum).
+                            Alle für diesen Kunden erstellten Rechnungen.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {sentInvoices.length === 0 ? (
-                            <p className="text-muted-foreground italic">Noch keine Rechnungen verschickt.</p>
+                        {customerInvoices.length === 0 ? (
+                            <p className="text-muted-foreground italic">Noch keine Rechnungen erstellt.</p>
                         ) : (
                             <div className="space-y-2">
-                                {sentInvoices.map((inv) => {
+                                {customerInvoices.map((inv) => {
                                     const gross = calculateInvoiceGrossAmount(inv);
                                     return (
                                         <div key={inv.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-3 border rounded-md">
@@ -94,8 +94,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                                                     {inv.invoiceNumber ? `Rechnung ${inv.invoiceNumber}` : `Rechnung #${inv.id}`}
                                                 </div>
                                                 <div className="text-sm text-muted-foreground">
-                                                    Datum: {new Date(inv.date).toLocaleDateString("de-DE")} · Gesendet am:{" "}
-                                                    {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString("de-DE") : "-"}
+                                                    Datum: {new Date(inv.date).toLocaleDateString("de-DE")}
+                                                    {inv.sentAt
+                                                        ? ` · Gesendet am: ${new Date(inv.sentAt).toLocaleDateString("de-DE")}`
+                                                        : " · Noch nicht versendet"}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">

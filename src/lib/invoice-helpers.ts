@@ -131,7 +131,7 @@ export async function getInvoiceGreeting(language: 'de' | 'en' = 'de'): Promise<
 export async function generateInvoiceNumber(date: string): Promise<string> {
   const { db } = await import("@/db");
   const { invoices } = await import("@/db/schema");
-  const { like, isNotNull } = await import("drizzle-orm");
+  const { like } = await import("drizzle-orm");
   
   // Parse date - handle both ISO string and YYYY-MM-DD format
   const dateStr = date.includes("T") ? date.split("T")[0] : date;

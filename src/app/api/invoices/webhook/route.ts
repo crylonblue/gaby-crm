@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { customerBudgets, invoices } from "@/db/schema";
-import { and, eq, isNotNull, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
 
@@ -28,11 +28,11 @@ async function upsertCustomerBudgetAmount(params: { customerId: number; year: nu
 
 async function recalcCustomerBudgetFromInvoices(params: { customerId: number; year: number }) {
     const pattern = `${params.year}-%`;
+    // Budget consists of ALL created invoices for the year (not only the ones that were sent).
     const invs = await db.select().from(invoices).where(
         and(
             eq(invoices.customerId, params.customerId),
-            like(invoices.date, pattern),
-            isNotNull(invoices.sentAt)
+            like(invoices.date, pattern)
         )
     );
 
@@ -61,8 +61,9 @@ export async function POST(request: NextRequest) {
 
         const currentStatus = currentInvoice[0].status || "offen";
         const isPaid = currentStatus === "bezahlt";
-        // Preserve paid status - if already paid, keep it as "bezahlt", otherwise set to "offen"
-        const newStatus = isPaid ? "bezahlt" : "offen";
+        // Preserve special statuses: a "storniert" invoice stays storniert even when its Storno is sent.
+        // Otherwise preserve paid status - if already paid keep "bezahlt", else "offen".
+        const newStatus = currentStatus === "storniert" ? "storniert" : (isPaid ? "bezahlt" : "offen");
 
         // Update invoice with provided data
         const updateData: {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
             .where(eq(invoices.id, id));
 
         // Keep derived "Abgerechnet" (customer budget) consistent after send/queue events.
-        // We only count invoices that have actually been sent (sentAt not null).
+        // The budget counts all created invoices for the year (regardless of send status).
         const year = new Date(currentInvoice[0]!.date).getFullYear();
         await recalcCustomerBudgetFromInvoices({ customerId: currentInvoice[0]!.customerId, year });
 

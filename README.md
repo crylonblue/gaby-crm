@@ -1,3 +1,9 @@
+**GABY-CRM** — CRM- & Rechnungssystem für einen deutschen Pflegedienst (Next.js 16 App Router).
+
+## 📚 Dokumentation
+
+Die vollständige technische Doku liegt als **Obsidian-Vault** in [`docs/`](./docs/). Einstieg: [`docs/Home.md`](./docs/Home.md). Eine Kurzfassung steht in [`CURSOR.md`](./CURSOR.md).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

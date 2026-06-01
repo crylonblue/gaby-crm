@@ -15,8 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Search, Eye, Check, Pencil } from "lucide-react";
-import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
+import { Search, Eye, Check, Pencil, Ban } from "lucide-react";
+import { CancelInvoiceDialog } from "@/components/invoices/CancelInvoiceDialog";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
 import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
@@ -77,6 +77,8 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                 ) : (
                                     filteredInvoices.map((invoice) => {
                                         const amount = calculateInvoiceGrossAmount(invoice);
+                                        const isLocked = (invoice.status || "offen") === "storniert";
+                                        const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
 
                                         return (
                                             <TableRow key={invoice.id}>
@@ -95,6 +97,19 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                 <TableCell>
                                                     {(() => {
                                                         const status = invoice.status || "offen";
+                                                        if (status === "storniert") {
+                                                            return (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="border-red-600 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 dark:border-red-500"
+                                                                >
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Ban className="h-3 w-3" />
+                                                                        Storniert
+                                                                    </div>
+                                                                </Badge>
+                                                            );
+                                                        }
                                                         const isPaid = status === "bezahlt";
 
                                                         return (
@@ -142,25 +157,33 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                             </Link>
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        asChild
-                                                        title="Rechnung bearbeiten"
-                                                    >
-                                                        <Link href={`/invoices/${invoice.id}/edit`}>
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                    <SendInvoiceDialog
-                                                        invoiceId={invoice.id}
-                                                        customerId={invoice.customerId}
-                                                        invoiceNumber={invoice.invoiceNumber || undefined}
-                                                        customerLastName={invoice.lastName}
-                                                        insuranceNumber={invoice.insuranceNumber || undefined}
-                                                    />
-                                                    <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
-                                                    <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+                                                    {!isLocked && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            asChild
+                                                            title="Rechnung bearbeiten"
+                                                        >
+                                                            <Link href={`/invoices/${invoice.id}/edit`}>
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                                    {!isCancelledOriginal && (
+                                                        <SendInvoiceDialog
+                                                            invoiceId={invoice.id}
+                                                            customerId={invoice.customerId}
+                                                            invoiceNumber={invoice.invoiceNumber || undefined}
+                                                            customerLastName={invoice.lastName}
+                                                            insuranceNumber={invoice.insuranceNumber || undefined}
+                                                        />
+                                                    )}
+                                                    {!isLocked && (
+                                                        <>
+                                                            <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
+                                                            <CancelInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+                                                        </>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         );
