@@ -28,13 +28,14 @@ Zusätzlich existieren als SQL-Dateien, aber **nicht im Journal**:
 - `0010_add_insurance_address.sql`
 - `0011_insurance_structured_address.sql`
 - `0012_add_invoice_cancellation.sql` — Spalten `cancels_invoice_id`, `cancelled_by_invoice_id` ([[Invoice Cancellation (Storno)]])
+- `0013_add_seller_ik_number.sql` — Spalte `seller_settings.ik_number` ([[Seller Settings]])
 
 > ⚠️ Diese wurden **außerhalb** des regulären Drizzle-Flows angewandt. `scripts/run-migration.ts` führt eine Migration gegen Turso aus (liest die Datei, splittet an `;`, führt Statement für Statement aus). Standardziel ist `0012_add_invoice_cancellation.sql`; ein anderer Dateiname kann als Argument übergeben werden:
 > ```bash
 > npx tsx scripts/run-migration.ts                       # wendet 0012 an
 > npx tsx scripts/run-migration.ts 0011_insurance_structured_address.sql
 > ```
-> Beim Aufsetzen einer frischen DB muss man darauf achten, auch `0009`–`0012` einzuspielen.
+> Beim Aufsetzen einer frischen DB muss man darauf achten, auch `0009`–`0013` einzuspielen.
 
 ## Verwandt
 - [[Database Overview]] · [[Development Setup]]

@@ -15,7 +15,7 @@ Firmen-/Absenderdaten des Pflegedienstes. Es existiert **genau eine Zeile** (Sin
 | Adresse | `street`, `streetNumber`, `postalCode`, `city` (alle not null, default ""), `country` (default `"DE"`) |
 | Kontakt | `phoneNumber`, `email` |
 | Kontaktperson (XRechnung BR-DE-2) | `contactName`, `contactPhone`, `contactEmail` |
-| Steuer | `taxNumber`, `vatId` |
+| Steuer / Kennzeichen | `taxNumber`, `vatId`, `ikNumber` (Institutionskennzeichen — auf der Rechnung prominent unter dem Firmennamen, siehe [[PDF Generation]]) |
 | Recht (Footer) | `court`, `registerNumber`, `managingDirector` |
 | Bank | `bankName`, `iban`, `bic` |
 | Logo | `logoUrl` (S3) |

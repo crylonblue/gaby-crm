@@ -116,6 +116,8 @@ export const sellerSettings = sqliteTable("seller_settings", {
     // Tax Information
     taxNumber: text("tax_number"),
     vatId: text("vat_id"),
+    // Institutionskennzeichen (IK number) — required for billing health insurances
+    ikNumber: text("ik_number"),
     // Legal Information
     court: text("court"),
     registerNumber: text("register_number"),

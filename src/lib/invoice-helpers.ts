@@ -24,6 +24,7 @@ export async function getSellerInfo(): Promise<Seller> {
       email: settings.email ?? undefined,
       taxNumber: settings.taxNumber ?? undefined,
       vatId: settings.vatId ?? undefined,
+      ikNumber: settings.ikNumber ?? undefined,
       contact: settings.contactName || settings.contactPhone || settings.contactEmail
         ? {
             name: settings.contactName ?? undefined,
@@ -51,6 +52,7 @@ export async function getSellerInfo(): Promise<Seller> {
     email: process.env.SELLER_EMAIL,
     taxNumber: process.env.SELLER_TAX_NUMBER,
     vatId: process.env.SELLER_VAT_ID,
+    ikNumber: process.env.SELLER_IK_NUMBER,
     contact: process.env.SELLER_CONTACT_NAME || process.env.SELLER_CONTACT_PHONE || process.env.SELLER_CONTACT_EMAIL
       ? {
           name: process.env.SELLER_CONTACT_NAME,

@@ -177,10 +177,23 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   const rightColumnX = PAGE_WIDTH / 2 + 10;
 
   // ===========================================
-  // SECTION 1: Header - One-line sender + Logo
+  // SECTION 1: Header - Company letterhead + Logo
   // ===========================================
-  
-  // One-line sender address (top left, small font)
+
+  const headerTopY = y;
+
+  // Company name (prominent, top left)
+  drawText(invoice.seller.name, MARGIN_LEFT, y, { font: helveticaBold, size: 16 });
+  y -= 19;
+
+  // IK number directly under the company name (larger and bold)
+  if (invoice.seller.ikNumber) {
+    const ikLabel = language === 'de' ? 'IK-Nr.' : 'IK No.';
+    drawText(`${ikLabel}: ${invoice.seller.ikNumber}`, MARGIN_LEFT, y, { font: helveticaBold, size: 11 });
+    y -= 16;
+  }
+
+  // One-line sender address (small font) — the envelope sender line above the recipient
   // Using bullet character instead of arrow (→) as WinAnsi encoding doesn't support arrows
   const senderOneLine = `${invoice.seller.name} - ${sellerAddress.streetLine} - ${sellerAddress.cityLine}`;
   drawText(senderOneLine, MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY });
@@ -191,15 +204,15 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
     drawText(sanitizeText(invoice.seller.subHeadline), MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY });
   }
 
-  // Logo (top right)
+  // Logo (top right) — anchored to the very top so it aligns with the company name
   let logoHeight = 0;
   if (invoice.logoUrl) {
     const imageData = await fetchImageAsBytes(invoice.logoUrl);
     if (imageData) {
-      const image = imageData.type === "png" 
+      const image = imageData.type === "png"
         ? await pdfDoc.embedPng(imageData.bytes)
         : await pdfDoc.embedJpg(imageData.bytes);
-      
+
       // Scale logo to max 150px width or 50px height
       const maxWidth = 150;
       const maxHeight = 50;
@@ -207,10 +220,10 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
       const scaledWidth = image.width * scale;
       const scaledHeight = image.height * scale;
       logoHeight = scaledHeight;
-      
+
       page.drawImage(image, {
         x: PAGE_WIDTH - MARGIN_RIGHT - scaledWidth,
-        y: y - scaledHeight + 10,
+        y: headerTopY - scaledHeight + 10,
         width: scaledWidth,
         height: scaledHeight,
       });
@@ -220,8 +233,9 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   // ===========================================
   // SECTION 2: Two-Column Layout
   // ===========================================
-  
-  y -= Math.max(logoHeight, 20) + 30;
+
+  // Start below both the text block (current y) and the logo (anchored at the top)
+  y = Math.min(y, headerTopY - logoHeight) - 24;
   const twoColumnY = y;
 
   // LEFT COLUMN: Insurance is always the recipient (buyer) - customer below as "im Auftrag von"

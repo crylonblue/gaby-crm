@@ -11,6 +11,7 @@ Rechnungs-PDFs werden serverseitig mit **pdf-lib** erzeugt: `generateInvoicePDF(
 - Format **A4** (595.28 × 841.89 pt), Ränder 50 pt, Standardfonts (Helvetica).
 - Eingabe ist das **Dokument-Modell** `Invoice` (Zod, `lib/schema.ts`), erzeugt via `mapDbInvoiceToInvoice` ([[Invoice Calculation]]).
 - Mehrsprachig: `language: 'de' | 'en'` (Übersetzungen in `lib/invoice-translations.ts`); aktuell wird `'de'` verwendet.
+- **Kopfbereich:** Firmenname groß & fett oben links, direkt darunter die **IK-Nummer** (`IK-Nr.: …`, fett) sofern in den [[Seller Settings]] gepflegt; Logo oben rechts. Darunter die kleine graue Absenderzeile.
 - Logo wird per `fetchImageAsBytes` von der [[S3 Storage|S3]]-URL geladen und eingebettet (PNG/JPG-Erkennung via Content-Type bzw. Magic Bytes).
 - Anrede aus `seller_settings.invoiceGreeting` bzw. Default („Sehr geehrte Damen und Herren,").
 

@@ -36,6 +36,7 @@ const sellerSettingsSchema = z.object({
     contactEmail: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
     taxNumber: z.string().optional(),
     vatId: z.string().optional(),
+    ikNumber: z.string().optional(),
     court: z.string().optional(),
     registerNumber: z.string().optional(),
     managingDirector: z.string().optional(),
@@ -74,6 +75,7 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
             contactEmail: settings?.contactEmail || "",
             taxNumber: settings?.taxNumber || "",
             vatId: settings?.vatId || "",
+            ikNumber: settings?.ikNumber || "",
             court: settings?.court || "",
             registerNumber: settings?.registerNumber || "",
             managingDirector: settings?.managingDirector || "",
@@ -173,6 +175,23 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
                                 <FormControl>
                                     <Input {...field} placeholder="z.B. Steuerberatung" />
                                 </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="ikNumber"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>IK-Nummer</FormLabel>
+                                <FormControl>
+                                    <Input {...field} placeholder="z.B. 123456789" inputMode="numeric" />
+                                </FormControl>
+                                <FormDescription>
+                                    Institutionskennzeichen – wird auf den Rechnungen unter dem Firmennamen angezeigt.
+                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}

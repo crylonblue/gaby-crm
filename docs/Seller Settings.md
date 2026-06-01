@@ -8,7 +8,9 @@ tags: [feature]
 Zentrale Konfiguration der Absender-/Firmendaten unter `/settings`. Tabelle [[seller_settings]] (Single-Row), Actions in `seller.actions.ts`.
 
 ## Inhalt
-Firmenname & Sub-Headline, Adresse, Kontakt (Telefon/E-Mail), Kontaktperson (für XRechnung BR-DE-2), Steuernummer & USt-IdNr, Registergericht/-nummer/Geschäftsführer (Footer), Bankdaten (IBAN/BIC/Bank), Logo, Anrede-Text (`invoiceGreeting`).
+Firmenname & Sub-Headline, **IK-Nummer (Institutionskennzeichen)**, Adresse, Kontakt (Telefon/E-Mail), Kontaktperson (für XRechnung BR-DE-2), Steuernummer & USt-IdNr, Registergericht/-nummer/Geschäftsführer (Footer), Bankdaten (IBAN/BIC/Bank), Logo, Anrede-Text (`invoiceGreeting`).
+
+Die **IK-Nummer** wird auf jeder Rechnung prominent (groß & fett) direkt unter dem Firmennamen ausgegeben — siehe [[PDF Generation]].
 
 ## Actions
 | Action | Zweck |
