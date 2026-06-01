@@ -102,12 +102,18 @@ function getCountryName(countryCode: string, language: InvoiceLanguage = 'de'): 
 
 export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLanguage = 'de'): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const pages = [page];
+
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  
+
   let y = PAGE_HEIGHT - MARGIN_TOP;
+
+  // The footer occupies a fixed band at the bottom of every page.
+  // Content (line items, totals, outro) must never be drawn into this band.
+  const footerY = MARGIN_BOTTOM + 60;
+  const contentBottom = footerY + 28;
   
   // Get translations for the selected language
   const t = getTranslations(language);
@@ -152,6 +158,13 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
     drawText(text, rightX - textWidth, yPos, options);
   };
 
+  // Adds a new page and resets the writing cursor to the top.
+  const startNewPage = () => {
+    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pages.push(page);
+    y = PAGE_HEIGHT - MARGIN_TOP;
+  };
+
   // Word wrap helper
   const wrapText = (text: string, maxWidth: number, font: typeof helvetica, size: number): string[] => {
     const words = text.split(' ');
@@ -175,6 +188,8 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
 
   const sellerAddress = formatAddress(invoice.seller.address);
   const rightColumnX = PAGE_WIDTH / 2 + 10;
+  // Max width for left-column text so it never bleeds into the right (metadata) column.
+  const leftColWidth = rightColumnX - MARGIN_LEFT - 15;
 
   // ===========================================
   // SECTION 1: Header - Company letterhead + Logo
@@ -196,7 +211,7 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   // One-line sender address (small font) — the envelope sender line above the recipient
   // Using bullet character instead of arrow (→) as WinAnsi encoding doesn't support arrows
   const senderOneLine = `${invoice.seller.name} - ${sellerAddress.streetLine} - ${sellerAddress.cityLine}`;
-  drawText(senderOneLine, MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY });
+  drawText(senderOneLine, MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY, maxWidth: CONTENT_WIDTH - 160 });
 
   // Seller subHeadline below sender line (e.g., "Mitglied im Bund deutscher Senioren-Assistenten")
   if (invoice.seller.subHeadline) {
@@ -242,9 +257,12 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   const customerAddress = formatAddress(invoice.customer.address);
   const insuranceAddress = formatAddress(invoice.insurance.address);
 
-  // Insurance block (top) - name and address
-  drawText(invoice.insurance.name, MARGIN_LEFT, y, { font: helveticaBold });
-  y -= 14;
+  // Insurance block (top) - name (wrapped) and address
+  const insuranceNameLines = wrapText(sanitizeText(invoice.insurance.name), leftColWidth, helveticaBold, 10);
+  for (const line of insuranceNameLines) {
+    drawText(line, MARGIN_LEFT, y, { font: helveticaBold });
+    y -= 14;
+  }
   drawText(insuranceAddress.streetLine, MARGIN_LEFT, y);
   y -= 14;
   drawText(insuranceAddress.cityLine, MARGIN_LEFT, y);
@@ -255,14 +273,17 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   }
   y -= 8; // Spacing before customer
 
-  // Customer block (below) - "im Auftrag von" smaller, light grey, on one line
+  // Customer block (below) - "im Auftrag von" (larger and bold), wrapped to the left column
   const imAuftragVon = language === 'de' ? 'im Auftrag von' : 'on behalf of';
-  const customerOneLine = `${invoice.customer.name}, ${customerAddress.streetLine}, ${customerAddress.cityLine}`;
-  drawText(`${imAuftragVon} ${customerOneLine}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
-  y -= 12;
+  const customerOneLine = `${imAuftragVon} ${invoice.customer.name}, ${customerAddress.streetLine}, ${customerAddress.cityLine}`;
+  const customerLines = wrapText(sanitizeText(customerOneLine), leftColWidth, helveticaBold, 10);
+  for (const line of customerLines) {
+    drawText(line, MARGIN_LEFT, y, { font: helveticaBold, size: 10, color: COLOR_GRAY });
+    y -= 14;
+  }
   if (invoice.customer.insuranceNumber) {
     const insuranceLabel = language === 'de' ? 'Versicherungsnummer:' : 'Insurance Number:';
-    drawText(`${insuranceLabel} ${invoice.customer.insuranceNumber}`, MARGIN_LEFT, y, { size: 8, color: COLOR_LIGHT_GRAY });
+    drawText(`${insuranceLabel} ${invoice.customer.insuranceNumber}`, MARGIN_LEFT, y, { size: 8, color: COLOR_GRAY, maxWidth: leftColWidth });
     y -= 12;
   }
 
@@ -365,23 +386,27 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
     ? { description: 'Beschreibung', quantity: 'Menge', unit: 'Einheit', unitPrice: 'Einzelpreis', total: 'Gesamtpreis' }
     : { description: 'Description', quantity: 'Qty', unit: 'Unit', unitPrice: 'Unit Price', total: 'Total' };
 
-  drawText(tableHeaders.description, col.description, y, { font: helveticaBold, size: 9 });
-  drawTextRight(tableHeaders.quantity, col.quantity + 40, y, { font: helveticaBold, size: 9 });
-  drawText(tableHeaders.unit, col.unit, y, { font: helveticaBold, size: 9 });
-  drawTextRight(tableHeaders.unitPrice, col.unitPrice + 55, y, { font: helveticaBold, size: 9 });
-  drawTextRight(tableHeaders.total, col.total, y, { font: helveticaBold, size: 9 });
+  const drawTableHeader = () => {
+    drawText(tableHeaders.description, col.description, y, { font: helveticaBold, size: 9 });
+    drawTextRight(tableHeaders.quantity, col.quantity + 40, y, { font: helveticaBold, size: 9 });
+    drawText(tableHeaders.unit, col.unit, y, { font: helveticaBold, size: 9 });
+    drawTextRight(tableHeaders.unitPrice, col.unitPrice + 55, y, { font: helveticaBold, size: 9 });
+    drawTextRight(tableHeaders.total, col.total, y, { font: helveticaBold, size: 9 });
 
-  // Header bottom border
-  y -= 5;
-  page.drawLine({
-    start: { x: tableLeft, y },
-    end: { x: tableRight, y },
-    thickness: 0.5,
-    color: COLOR_BLACK,
-  });
+    // Header bottom border
+    y -= 5;
+    page.drawLine({
+      start: { x: tableLeft, y },
+      end: { x: tableRight, y },
+      thickness: 0.5,
+      color: COLOR_BLACK,
+    });
 
-  // Table rows
-  y -= 18;
+    // Space before first row
+    y -= 18;
+  };
+
+  drawTableHeader();
   let netTotal = 0;
   const maxDescWidth = CONTENT_WIDTH * 0.45;
   const lineItemFontSize = 10;
@@ -393,7 +418,14 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
 
     // Wrap description text to multiple lines if needed
     const descriptionLines = wrapText(sanitizeText(item.description), maxDescWidth, helvetica, lineItemFontSize);
-    
+
+    // Page break if this row (incl. wrapped description lines + spacing) would hit the footer band.
+    const itemHeight = 20 + Math.max(0, descriptionLines.length - 1) * lineItemLineHeight;
+    if (y - itemHeight < contentBottom) {
+      startNewPage();
+      drawTableHeader();
+    }
+
     // Draw first line of description on same row as other columns
     if (descriptionLines.length > 0) {
       drawText(descriptionLines[0], col.description, y);
@@ -425,9 +457,18 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   // ===========================================
   // SECTION 6: Totals Block (Right-Aligned)
   // ===========================================
-  
+
+  // Keep the totals block together: break to a new page if it would not fit.
+  const distinctVatRateCount = new Set(
+    invoice.items.map((it) => (typeof it.vatRate === 'number' && !isNaN(it.vatRate) ? it.vatRate : (invoice.taxRate || 19)))
+  ).size;
+  const totalsBlockHeight = 10 + 16 + distinctVatRateCount * 16 + 16 + 24 + 24;
+  if (y - totalsBlockHeight < contentBottom) {
+    startNewPage();
+  }
+
   y -= 10;
-  
+
   // Calculate VAT per rate
   const vatByRate = new Map<number, { basis: number; tax: number }>();
   let totalTax = 0;
@@ -495,6 +536,9 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
     for (const line of outroLines) {
       const wrappedLines = wrapText(sanitizeText(line), CONTENT_WIDTH, helvetica, 10);
       for (const wrappedLine of wrappedLines) {
+        if (y - 14 < contentBottom) {
+          startNewPage();
+        }
         drawText(wrappedLine, MARGIN_LEFT, y);
         y -= 14;
       }
@@ -502,10 +546,10 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   }
 
   // ===========================================
-  // SECTION 8: Footer (4 Columns)
+  // SECTION 8: Footer (4 Columns) - drawn on every page
   // ===========================================
-  
-  const footerY = MARGIN_BOTTOM + 60;
+
+  const drawFooter = (pageNumberText: string) => {
   const footerFontSize = 8;
   const footerLineHeight = 11;
   const footerColWidth = CONTENT_WIDTH / 4;
@@ -539,20 +583,24 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
       // Break to two lines
       drawText(label, x, yPos, { size: footerFontSize, color: COLOR_GRAY });
       yPos -= footerLineHeight;
-      drawText(value, x, yPos, { size: footerFontSize });
+      drawText(value, x, yPos, { size: footerFontSize, maxWidth });
       return yPos - footerLineHeight;
     }
   };
 
-  // Helper to draw footer value only (no label)
+  // Helper to draw footer value only (no label) - truncated to the column width
   const drawFooterValue = (value: string, x: number, yPos: number) => {
-    drawText(value, x, yPos, { size: footerFontSize });
+    drawText(value, x, yPos, { size: footerFontSize, maxWidth: footerColWidth - 5 });
   };
 
   // Column 1: Company Address (no labels, just values)
   let col1Y = footerY;
-  drawFooterValue(invoice.seller.name, footerCols[0], col1Y);
-  col1Y -= footerLineHeight;
+  // Wrap a long company name so it doesn't overflow into the next column
+  const sellerNameLines = wrapText(sanitizeText(invoice.seller.name), footerColWidth - 5, helvetica, footerFontSize);
+  for (const line of sellerNameLines) {
+    drawFooterValue(line, footerCols[0], col1Y);
+    col1Y -= footerLineHeight;
+  }
   // Show subHeadline (e.g., "Steuerberatungsgesellschaft") if available
   // Wrap long subHeadlines so they don't overflow into the next column
   if (invoice.seller.subHeadline) {
@@ -609,8 +657,14 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   }
 
   // Page number (bottom right)
-  const pageNumberText = '1/1';
   drawTextRight(pageNumberText, PAGE_WIDTH - MARGIN_RIGHT, MARGIN_BOTTOM, { size: 8, color: COLOR_GRAY });
+  };
+
+  // Draw the footer on every page now that the total page count is known.
+  for (let i = 0; i < pages.length; i++) {
+    page = pages[i];
+    drawFooter(`${i + 1}/${pages.length}`);
+  }
 
   // Set document metadata
   const invoiceLabel = language === 'en' ? 'Invoice' : 'Rechnung';
