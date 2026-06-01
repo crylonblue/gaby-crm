@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Link from "next/link";
 import { Edit, Phone, Mail, MapPin, Calendar, FileText, HeartPulse, User, Euro } from "lucide-react";
 import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
+import { CancelInvoiceDialog } from "@/components/invoices/CancelInvoiceDialog";
 import { Badge } from "@/components/ui/badge";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
@@ -87,11 +88,20 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                             <div className="space-y-2">
                                 {customerInvoices.map((inv) => {
                                     const gross = calculateInvoiceGrossAmount(inv);
+                                    const isCancelled = (inv.status || "offen") === "storniert";
                                     return (
                                         <div key={inv.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-3 border rounded-md">
                                             <div className="min-w-0">
-                                                <div className="font-medium truncate">
+                                                <div className="font-medium truncate flex items-center gap-2">
                                                     {inv.invoiceNumber ? `Rechnung ${inv.invoiceNumber}` : `Rechnung #${inv.id}`}
+                                                    {isCancelled && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-red-600 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 dark:border-red-500"
+                                                        >
+                                                            Storniert
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <div className="text-sm text-muted-foreground">
                                                     Datum: {new Date(inv.date).toLocaleDateString("de-DE")}
@@ -118,6 +128,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                                                 <Button size="sm" variant="secondary" asChild>
                                                     <Link href={`/invoices/${inv.id}/edit`}>Öffnen</Link>
                                                 </Button>
+                                                {!isCancelled && (
+                                                    <CancelInvoiceDialog id={inv.id} invoiceNumber={inv.invoiceNumber} withLabel />
+                                                )}
                                             </div>
                                         </div>
                                     );

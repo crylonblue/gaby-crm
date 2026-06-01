@@ -20,9 +20,11 @@ import { cancelInvoice } from "@/lib/actions/invoice.actions";
 interface CancelInvoiceDialogProps {
     id: number;
     invoiceNumber?: string | null;
+    /** Render a labeled button ("Stornieren") instead of the icon-only trigger. */
+    withLabel?: boolean;
 }
 
-export function CancelInvoiceDialog({ id, invoiceNumber }: CancelInvoiceDialogProps) {
+export function CancelInvoiceDialog({ id, invoiceNumber, withLabel = false }: CancelInvoiceDialogProps) {
     const [isPending, startTransition] = useTransition();
 
     const handleCancel = () => {
@@ -43,9 +45,15 @@ export function CancelInvoiceDialog({ id, invoiceNumber }: CancelInvoiceDialogPr
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" title="Rechnung stornieren">
-                    <Ban className="h-4 w-4" />
-                </Button>
+                {withLabel ? (
+                    <Button variant="destructive" size="sm" title="Rechnung stornieren">
+                        <Ban className="h-4 w-4 mr-2" /> Stornieren
+                    </Button>
+                ) : (
+                    <Button variant="destructive" size="icon" title="Rechnung stornieren">
+                        <Ban className="h-4 w-4" />
+                    </Button>
+                )}
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
