@@ -33,6 +33,7 @@ export const SellerSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   taxNumber: z.string().optional(),
   vatId: z.string().optional(),
+  ikNumber: z.string().optional(), // Institutionskennzeichen (healthcare)
   contact: ContactSchema.optional(), // XRechnung BR-DE-2
   // Legal information for footer
   court: z.string().optional(), // e.g., "Amtsgericht München"

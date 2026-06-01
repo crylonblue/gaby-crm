@@ -2,17 +2,17 @@
 
 import { db } from "@/db";
 import { customers, NewCustomer, invoices } from "@/db/schema";
-import { eq, desc, and, like, isNotNull } from "drizzle-orm";
+import { eq, desc, and, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { calculateInvoiceGrossAmount } from "../invoice-utils";
 
 async function getYearlyBilledAmountFromInvoices(params: { customerId: number; year: number }): Promise<number> {
     const pattern = `${params.year}-%`;
+    // Budget consists of ALL created invoices for the year (not only the ones that were sent).
     const invs = await db.select().from(invoices).where(
         and(
             eq(invoices.customerId, params.customerId),
-            like(invoices.date, pattern),
-            isNotNull(invoices.sentAt)
+            like(invoices.date, pattern)
         )
     );
 

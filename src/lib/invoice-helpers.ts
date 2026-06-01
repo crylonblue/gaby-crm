@@ -24,6 +24,7 @@ export async function getSellerInfo(): Promise<Seller> {
       email: settings.email ?? undefined,
       taxNumber: settings.taxNumber ?? undefined,
       vatId: settings.vatId ?? undefined,
+      ikNumber: settings.ikNumber ?? undefined,
       contact: settings.contactName || settings.contactPhone || settings.contactEmail
         ? {
             name: settings.contactName ?? undefined,
@@ -51,6 +52,7 @@ export async function getSellerInfo(): Promise<Seller> {
     email: process.env.SELLER_EMAIL,
     taxNumber: process.env.SELLER_TAX_NUMBER,
     vatId: process.env.SELLER_VAT_ID,
+    ikNumber: process.env.SELLER_IK_NUMBER,
     contact: process.env.SELLER_CONTACT_NAME || process.env.SELLER_CONTACT_PHONE || process.env.SELLER_CONTACT_EMAIL
       ? {
           name: process.env.SELLER_CONTACT_NAME,
@@ -131,7 +133,7 @@ export async function getInvoiceGreeting(language: 'de' | 'en' = 'de'): Promise<
 export async function generateInvoiceNumber(date: string): Promise<string> {
   const { db } = await import("@/db");
   const { invoices } = await import("@/db/schema");
-  const { like, isNotNull } = await import("drizzle-orm");
+  const { like } = await import("drizzle-orm");
   
   // Parse date - handle both ISO string and YYYY-MM-DD format
   const dateStr = date.includes("T") ? date.split("T")[0] : date;

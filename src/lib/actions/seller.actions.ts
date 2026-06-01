@@ -37,6 +37,7 @@ export async function updateSellerSettings(data: {
     contactEmail?: string;
     taxNumber?: string;
     vatId?: string;
+    ikNumber?: string;
     court?: string;
     registerNumber?: string;
     managingDirector?: string;
@@ -75,6 +76,7 @@ export async function updateSellerSettings(data: {
                 contactEmail: data.contactEmail,
                 taxNumber: data.taxNumber,
                 vatId: data.vatId,
+                ikNumber: data.ikNumber,
                 court: data.court,
                 registerNumber: data.registerNumber,
                 managingDirector: data.managingDirector,

@@ -4,9 +4,9 @@ import { Invoice } from "@/db/schema";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Check, Pencil } from "lucide-react";
+import { Eye, Check, Pencil, Ban } from "lucide-react";
 import Link from "next/link";
-import { DeleteInvoiceDialog } from "@/components/invoices/DeleteInvoiceDialog";
+import { CancelInvoiceDialog } from "@/components/invoices/CancelInvoiceDialog";
 import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
 import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
 import { getGoogleDriveViewerUrl } from "@/lib/utils";
@@ -30,6 +30,8 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
         <div className="grid gap-4">
             {invoices.map((invoice) => {
                 const amount = calculateInvoiceGrossAmount(invoice);
+                const isLocked = (invoice.status || "offen") === "storniert";
+                const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
 
                 return (
                     <Card key={invoice.id}>
@@ -40,10 +42,23 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                 </CardTitle>
                                 {(() => {
                                     const status = invoice.status || "offen";
+                                    if (status === "storniert") {
+                                        return (
+                                            <Badge
+                                                variant="outline"
+                                                className="border-red-600 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 dark:border-red-500"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    <Ban className="h-3 w-3" />
+                                                    Storniert
+                                                </div>
+                                            </Badge>
+                                        );
+                                    }
                                     const isPaid = status === "bezahlt";
-                                    
+
                                     return (
-                                        <Badge 
+                                        <Badge
                                             variant={isPaid ? "outline" : "secondary"}
                                             className={isPaid ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500" : ""}
                                         >
@@ -102,20 +117,28 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                     </Link>
                                 </Button>
                             )}
-                            <Button variant="outline" size="sm" asChild className="border">
-                                <Link href={`/invoices/${invoice.id}/edit`}>
-                                    <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
-                                </Link>
-                            </Button>
-                            <SendInvoiceDialog 
-                                invoiceId={invoice.id} 
-                                customerId={invoice.customerId} 
-                                invoiceNumber={invoice.invoiceNumber || undefined}
-                                customerLastName={invoice.lastName}
-                                insuranceNumber={invoice.insuranceNumber || undefined}
-                            />
-                            <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
-                            <DeleteInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+                            {!isLocked && (
+                                <Button variant="outline" size="sm" asChild className="border">
+                                    <Link href={`/invoices/${invoice.id}/edit`}>
+                                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                                    </Link>
+                                </Button>
+                            )}
+                            {!isCancelledOriginal && (
+                                <SendInvoiceDialog
+                                    invoiceId={invoice.id}
+                                    customerId={invoice.customerId}
+                                    invoiceNumber={invoice.invoiceNumber || undefined}
+                                    customerLastName={invoice.lastName}
+                                    insuranceNumber={invoice.insuranceNumber || undefined}
+                                />
+                            )}
+                            {!isLocked && (
+                                <>
+                                    <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
+                                    <CancelInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+                                </>
+                            )}
                         </CardFooter>
                     </Card>
                 );
