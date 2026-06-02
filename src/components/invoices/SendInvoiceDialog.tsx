@@ -26,10 +26,19 @@ interface SendInvoiceDialogProps {
     invoiceNumber?: string;
     customerLastName?: string;
     insuranceNumber?: string;
+    /** Controlled open state (e.g. when opened from a dropdown menu). */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function SendInvoiceDialog({ invoiceId, customerId, invoiceNumber, customerLastName, insuranceNumber }: SendInvoiceDialogProps) {
-    const [open, setOpen] = useState(false);
+export function SendInvoiceDialog({ invoiceId, customerId, invoiceNumber, customerLastName, insuranceNumber, open: controlledOpen, onOpenChange }: SendInvoiceDialogProps) {
+    const isControlled = controlledOpen !== undefined;
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = (value: boolean) => {
+        if (isControlled) onOpenChange?.(value);
+        else setInternalOpen(value);
+    };
     const [isPending, startTransition] = useTransition();
     const [useInsuranceEmail, setUseInsuranceEmail] = useState(true);
     const [customEmail, setCustomEmail] = useState("");
@@ -132,11 +141,13 @@ Holmer Weg 14
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="icon" title="Rechnung versenden" className="border">
-                    <Send className="h-4 w-4 text-blue-600" />
-                </Button>
-            </DialogTrigger>
+            {!isControlled && (
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="icon" title="Rechnung versenden" className="border">
+                        <Send className="h-4 w-4 text-blue-600" />
+                    </Button>
+                </DialogTrigger>
+            )}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Rechnung verschicken</DialogTitle>

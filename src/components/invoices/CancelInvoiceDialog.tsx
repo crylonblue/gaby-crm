@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Ban } from "lucide-react";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cancelInvoice } from "@/lib/actions/invoice.actions";
 
@@ -22,9 +22,19 @@ interface CancelInvoiceDialogProps {
     invoiceNumber?: string | null;
     /** Render a labeled button ("Stornieren") instead of the icon-only trigger. */
     withLabel?: boolean;
+    /** Controlled open state (e.g. when opened from a dropdown menu). Hides the built-in trigger. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function CancelInvoiceDialog({ id, invoiceNumber, withLabel = false }: CancelInvoiceDialogProps) {
+export function CancelInvoiceDialog({ id, invoiceNumber, withLabel = false, open: controlledOpen, onOpenChange }: CancelInvoiceDialogProps) {
+    const isControlled = controlledOpen !== undefined;
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = (value: boolean) => {
+        if (isControlled) onOpenChange?.(value);
+        else setInternalOpen(value);
+    };
     const [isPending, startTransition] = useTransition();
 
     const handleCancel = () => {
@@ -43,18 +53,20 @@ export function CancelInvoiceDialog({ id, invoiceNumber, withLabel = false }: Ca
     };
 
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                {withLabel ? (
-                    <Button variant="destructive" size="sm" title="Rechnung stornieren">
-                        <Ban className="h-4 w-4 mr-2" /> Stornieren
-                    </Button>
-                ) : (
-                    <Button variant="destructive" size="icon" title="Rechnung stornieren">
-                        <Ban className="h-4 w-4" />
-                    </Button>
-                )}
-            </AlertDialogTrigger>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+            {!isControlled && (
+                <AlertDialogTrigger asChild>
+                    {withLabel ? (
+                        <Button variant="destructive" size="sm" title="Rechnung stornieren">
+                            <Ban className="h-4 w-4 mr-2" /> Stornieren
+                        </Button>
+                    ) : (
+                        <Button variant="destructive" size="icon" title="Rechnung stornieren">
+                            <Ban className="h-4 w-4" />
+                        </Button>
+                    )}
+                </AlertDialogTrigger>
+            )}
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Rechnung stornieren?</AlertDialogTitle>

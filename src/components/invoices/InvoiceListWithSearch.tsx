@@ -13,14 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Search, Eye, Check, Pencil, Ban } from "lucide-react";
-import { CancelInvoiceDialog } from "@/components/invoices/CancelInvoiceDialog";
+import { Search, Check, Ban } from "lucide-react";
 import { MobileInvoiceList } from "@/components/invoices/MobileInvoiceList";
-import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
-import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
-import { getGoogleDriveViewerUrl } from "@/lib/utils";
+import { InvoiceActionsMenu } from "@/components/invoices/InvoiceActionsMenu";
 import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
 
 interface InvoiceListWithSearchProps {
@@ -77,10 +72,6 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                 ) : (
                                     filteredInvoices.map((invoice) => {
                                         const amount = calculateInvoiceGrossAmount(invoice);
-                                        const isLocked = (invoice.status || "offen") === "storniert";
-                                        const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
-                                        // Sent invoices are finalized → no longer editable (correct via Storno).
-                                        const isEditable = !isLocked && !invoice.sentAt;
 
                                         return (
                                             <TableRow key={invoice.id}>
@@ -142,50 +133,8 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                         <span className="text-muted-foreground">-</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="flex justify-end gap-2">
-                                                    {invoice.invoicePdfUrl && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            asChild
-                                                            title="Rechnung in Drive anzeigen"
-                                                        >
-                                                            <Link
-                                                                href={getGoogleDriveViewerUrl(invoice.invoicePdfUrl)}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            >
-                                                                <Eye className="h-4 w-4 text-blue-600" />
-                                                            </Link>
-                                                        </Button>
-                                                    )}
-                                                    {isEditable && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            asChild
-                                                            title="Rechnung bearbeiten"
-                                                        >
-                                                            <Link href={`/invoices/${invoice.id}/edit`}>
-                                                                <Pencil className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                    )}
-                                                    {!isCancelledOriginal && (
-                                                        <SendInvoiceDialog
-                                                            invoiceId={invoice.id}
-                                                            customerId={invoice.customerId}
-                                                            invoiceNumber={invoice.invoiceNumber || undefined}
-                                                            customerLastName={invoice.lastName}
-                                                            insuranceNumber={invoice.insuranceNumber || undefined}
-                                                        />
-                                                    )}
-                                                    {!isLocked && (
-                                                        <>
-                                                            <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
-                                                            <CancelInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
-                                                        </>
-                                                    )}
+                                                <TableCell className="text-right">
+                                                    <InvoiceActionsMenu invoice={invoice} />
                                                 </TableCell>
                                             </TableRow>
                                         );

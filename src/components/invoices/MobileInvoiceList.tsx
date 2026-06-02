@@ -3,13 +3,8 @@
 import { Invoice } from "@/db/schema";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Eye, Check, Pencil, Ban } from "lucide-react";
-import Link from "next/link";
-import { CancelInvoiceDialog } from "@/components/invoices/CancelInvoiceDialog";
-import { TogglePaidButton } from "@/components/invoices/TogglePaidButton";
-import { SendInvoiceDialog } from "@/components/invoices/SendInvoiceDialog";
-import { getGoogleDriveViewerUrl } from "@/lib/utils";
+import { Check, Ban } from "lucide-react";
+import { InvoiceActionsMenu } from "@/components/invoices/InvoiceActionsMenu";
 import { calculateInvoiceGrossAmount } from "@/lib/invoice-utils";
 
 interface MobileInvoiceListProps {
@@ -30,10 +25,6 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
         <div className="grid gap-4">
             {invoices.map((invoice) => {
                 const amount = calculateInvoiceGrossAmount(invoice);
-                const isLocked = (invoice.status || "offen") === "storniert";
-                const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
-                // Sent invoices are finalized → no longer editable (correct via Storno).
-                const isEditable = !isLocked && !invoice.sentAt;
 
                 return (
                     <Card key={invoice.id}>
@@ -107,40 +98,8 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                 {amount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                             </div>
                         </CardContent>
-                        <CardFooter className="flex justify-end gap-2 pt-2">
-                            {invoice.invoicePdfUrl && (
-                                <Button variant="outline" size="sm" asChild className="border">
-                                    <Link 
-                                        href={getGoogleDriveViewerUrl(invoice.invoicePdfUrl)} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                    >
-                                        <Eye className="h-4 w-4 mr-2" /> Anzeigen
-                                    </Link>
-                                </Button>
-                            )}
-                            {isEditable && (
-                                <Button variant="outline" size="sm" asChild className="border">
-                                    <Link href={`/invoices/${invoice.id}/edit`}>
-                                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
-                                    </Link>
-                                </Button>
-                            )}
-                            {!isCancelledOriginal && (
-                                <SendInvoiceDialog
-                                    invoiceId={invoice.id}
-                                    customerId={invoice.customerId}
-                                    invoiceNumber={invoice.invoiceNumber || undefined}
-                                    customerLastName={invoice.lastName}
-                                    insuranceNumber={invoice.insuranceNumber || undefined}
-                                />
-                            )}
-                            {!isLocked && (
-                                <>
-                                    <TogglePaidButton invoiceId={invoice.id} paid={invoice.status === "bezahlt"} />
-                                    <CancelInvoiceDialog id={invoice.id} invoiceNumber={invoice.invoiceNumber} />
-                                </>
-                            )}
+                        <CardFooter className="flex justify-end pt-2">
+                            <InvoiceActionsMenu invoice={invoice} />
                         </CardFooter>
                     </Card>
                 );
