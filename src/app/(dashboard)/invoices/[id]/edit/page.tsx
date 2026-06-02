@@ -22,6 +22,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     if (!invoice) notFound();
 
     const isCancelled = invoice.status === "storniert";
+    const isSent = !isCancelled && invoice.sentAt != null;
+    const isLocked = isCancelled || isSent;
 
     return (
         <div className="max-w-xl mx-auto space-y-6">
@@ -29,20 +31,27 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
                 { label: "Dashboard", href: "/" },
                 { label: "Rechnungen", href: "/invoices" },
                 { label: `Rechnung ${invoice.invoiceNumber || `#${invoice.id}`}`, href: "/invoices" },
-                { label: isCancelled ? "Storniert" : "Bearbeiten" }
+                { label: isLocked ? (isCancelled ? "Storniert" : "Versendet") : "Bearbeiten" }
             ]} />
-            {isCancelled ? (
+            {isLocked ? (
                 <>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Rechnung storniert</h1>
-                        <p className="text-muted-foreground">Diese Rechnung wurde storniert und kann nicht bearbeitet werden.</p>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                            {isCancelled ? "Rechnung storniert" : "Rechnung versendet"}
+                        </h1>
+                        <p className="text-muted-foreground">
+                            {isCancelled
+                                ? "Diese Rechnung wurde storniert und kann nicht bearbeitet werden."
+                                : "Diese Rechnung wurde bereits versendet und kann nicht mehr bearbeitet werden."}
+                        </p>
                     </div>
                     <div className="flex items-start gap-3 p-6 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
                         <Ban className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
                         <div className="space-y-3">
                             <p className="text-sm text-red-700 dark:text-red-400">
-                                Stornierte Rechnungen sind unveränderlich. Für eine Korrektur wurde bereits eine
-                                Stornorechnung erstellt.
+                                {isCancelled
+                                    ? "Stornierte Rechnungen sind unveränderlich. Für eine Korrektur wurde bereits eine Stornorechnung erstellt."
+                                    : "Versendete Rechnungen sind unveränderlich. Für eine Korrektur stornieren Sie die Rechnung (in der Übersicht) und erstellen Sie eine neue, korrigierte Rechnung."}
                             </p>
                             <Button asChild variant="outline">
                                 <Link href="/invoices">Zurück zur Übersicht</Link>

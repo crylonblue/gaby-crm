@@ -43,6 +43,12 @@ Der Lebenszyklus einer Rechnung kombiniert ein einfaches `status`-Feld mit zwei 
    → siehe [[Invoice Cancellation (Storno)]]
 ```
 
+## Bearbeitbarkeit (Festschreibung beim Versand)
+- **Vor dem Versand** (`sentAt == null`, Entwurf): frei bearbeitbar.
+- **Ab Versand** (`sentAt != null`): die Rechnung ist **festgeschrieben** und kann **nicht mehr bearbeitet** werden — `updateInvoice` lehnt ab, der Bearbeiten-Button verschwindet, die Edit-Seite zeigt einen Hinweis. Korrekturen laufen über [[Invoice Cancellation (Storno)|Storno]] + neue korrigierte Rechnung.
+- `storniert`-Rechnungen sind ebenfalls gesperrt.
+- Das ist konsistent mit der Nicht-Löschbarkeit: ein versendeter Beleg ist unveränderlich.
+
 ## Hinweise
 - Der Webhook bewahrt den `bezahlt`-Status: war eine Rechnung schon bezahlt, bleibt sie es.
 - Der Worker kann auch ohne `action` nur `invoiceNumber`/`url` aktualisieren (z. B. PDF-URL nachreichen). Siehe [[Webhooks]].

@@ -20,7 +20,7 @@ Erstellen, bearbeiten, bezahlt-markieren, versenden und löschen von Rechnungen.
 ## Rechnung bearbeiten — `updateInvoice(id, data)`
 - Aktualisiert die Felder, **regeneriert PDF & XRechnung** neu (außer `SKIP_S3_UPLOAD`).
 - Rechnet das Budget für altes und ggf. neues Jahr neu (Datumswechsel berücksichtigt).
-- Bearbeiten ist auch nach dem Versand möglich (siehe Git-Historie „Allow editing invoices after sending“).
+- **Nur vor dem Versand möglich:** Sobald `sentAt` gesetzt ist (oder die Rechnung `storniert` ist), lehnt `updateInvoice` ab. Versendete Belege sind festgeschrieben; Korrektur via [[Invoice Cancellation (Storno)|Storno]] + neue Rechnung. Siehe [[Invoice Lifecycle]].
 
 ## Bezahlt umschalten — `toggleInvoicePaid(id)`
 Setzt `paid` und spiegelt es in `status` (`bezahlt` / `offen`). UI: `TogglePaidButton`.

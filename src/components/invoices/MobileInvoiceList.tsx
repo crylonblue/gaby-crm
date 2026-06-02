@@ -32,6 +32,8 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                 const amount = calculateInvoiceGrossAmount(invoice);
                 const isLocked = (invoice.status || "offen") === "storniert";
                 const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
+                // Sent invoices are finalized → no longer editable (correct via Storno).
+                const isEditable = !isLocked && !invoice.sentAt;
 
                 return (
                     <Card key={invoice.id}>
@@ -117,7 +119,7 @@ export function MobileInvoiceList({ invoices, emptyMessage = "Keine Rechnungen v
                                     </Link>
                                 </Button>
                             )}
-                            {!isLocked && (
+                            {isEditable && (
                                 <Button variant="outline" size="sm" asChild className="border">
                                     <Link href={`/invoices/${invoice.id}/edit`}>
                                         <Pencil className="h-4 w-4 mr-2" /> Bearbeiten

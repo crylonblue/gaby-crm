@@ -79,6 +79,8 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                         const amount = calculateInvoiceGrossAmount(invoice);
                                         const isLocked = (invoice.status || "offen") === "storniert";
                                         const isCancelledOriginal = invoice.cancelledByInvoiceId != null;
+                                        // Sent invoices are finalized → no longer editable (correct via Storno).
+                                        const isEditable = !isLocked && !invoice.sentAt;
 
                                         return (
                                             <TableRow key={invoice.id}>
@@ -157,7 +159,7 @@ export function InvoiceListWithSearch({ invoices }: InvoiceListWithSearchProps) 
                                                             </Link>
                                                         </Button>
                                                     )}
-                                                    {!isLocked && (
+                                                    {isEditable && (
                                                         <Button
                                                             variant="outline"
                                                             size="icon"

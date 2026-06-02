@@ -229,6 +229,9 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
         if (inv.status === "storniert") {
             return { success: false, error: "Stornierte Rechnungen können nicht bearbeitet werden." };
         }
+        if (inv.sentAt) {
+            return { success: false, error: "Versendete Rechnungen können nicht mehr bearbeitet werden. Bitte erstellen Sie für Korrekturen eine Stornorechnung." };
+        }
 
         const oldYear = new Date(inv.date).getFullYear();
         const newDate = data.date ?? inv.date;
