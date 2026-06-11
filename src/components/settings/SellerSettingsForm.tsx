@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { updateSellerSettings, uploadLogo, deleteLogo } from "@/lib/actions/seller.actions";
 import { toast } from "sonner";
 import { SellerSettings } from "@/db/schema";
@@ -37,6 +44,8 @@ const sellerSettingsSchema = z.object({
     taxNumber: z.string().optional(),
     vatId: z.string().optional(),
     ikNumber: z.string().optional(),
+    taxMode: z.enum(["standard", "kleinunternehmer", "exempt_16"]),
+    taxExemptionReason: z.string().optional(),
     court: z.string().optional(),
     registerNumber: z.string().optional(),
     managingDirector: z.string().optional(),
@@ -76,6 +85,8 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
             taxNumber: settings?.taxNumber || "",
             vatId: settings?.vatId || "",
             ikNumber: settings?.ikNumber || "",
+            taxMode: (settings?.taxMode as "standard" | "kleinunternehmer" | "exempt_16") || "exempt_16",
+            taxExemptionReason: settings?.taxExemptionReason || "",
             court: settings?.court || "",
             registerNumber: settings?.registerNumber || "",
             managingDirector: settings?.managingDirector || "",
@@ -85,6 +96,8 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
             invoiceGreeting: settings?.invoiceGreeting || "",
         },
     });
+
+    const taxMode = form.watch("taxMode");
 
     function onSubmit(data: SellerSettingsFormValues) {
         startTransition(async () => {
@@ -361,7 +374,67 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
                 {/* Tax Information */}
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold">Steuerinformationen</h2>
-                    
+
+                    <FormField
+                        control={form.control}
+                        name="taxMode"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Umsatzsteuer-Behandlung *</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Steuermodus wählen" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="exempt_16">
+                                            Steuerfrei – § 4 Nr. 16 UStG (Pflege/Betreuung)
+                                        </SelectItem>
+                                        <SelectItem value="kleinunternehmer">
+                                            Kleinunternehmer – § 19 UStG
+                                        </SelectItem>
+                                        <SelectItem value="standard">
+                                            Regelbesteuerung (19 % / 7 %)
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                    Bestimmt, ob auf Rechnungen Umsatzsteuer ausgewiesen wird. Bei
+                                    „Steuerfrei“ und „Kleinunternehmer“ werden 0 % berechnet und ein
+                                    Pflichthinweis auf die Rechnung gedruckt.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {taxMode !== "standard" && (
+                        <FormField
+                            control={form.control}
+                            name="taxExemptionReason"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Steuerhinweis auf der Rechnung</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            {...field}
+                                            placeholder={
+                                                taxMode === "kleinunternehmer"
+                                                    ? "Kein Steuerausweis gemäß § 19 UStG (Kleinunternehmer)."
+                                                    : "Umsatzsteuerfrei gemäß § 4 Nr. 16 UStG."
+                                            }
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Optional. Leer lassen, um den Standardhinweis zu verwenden.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <FormField
                             control={form.control}
@@ -498,7 +571,7 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
                             <FormItem>
                                 <FormLabel>Anrede-Text</FormLabel>
                                 <FormDescription>
-                                    Der Text, der auf Rechnungen nach der Anrede erscheint (z.B. "Sehr geehrte Damen und Herren,")
+                                    Der Text, der auf Rechnungen nach der Anrede erscheint (z.B. „Sehr geehrte Damen und Herren,“)
                                 </FormDescription>
                                 <FormControl>
                                     <Textarea 

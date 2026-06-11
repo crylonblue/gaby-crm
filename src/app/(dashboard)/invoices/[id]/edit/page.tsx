@@ -1,6 +1,7 @@
 import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import { getCustomers } from "@/lib/actions/customer.actions";
 import { getInvoice } from "@/lib/actions/invoice.actions";
+import { getSellerSettings } from "@/lib/actions/seller.actions";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { Button } from "@/components/ui/button";
 import { Ban } from "lucide-react";
@@ -14,12 +15,16 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     const invoiceId = Number(id);
     if (!Number.isFinite(invoiceId)) notFound();
 
-    const [invoice, customers] = await Promise.all([
+    const [invoice, customers, settings] = await Promise.all([
         getInvoice(invoiceId),
         getCustomers(),
+        getSellerSettings(),
     ]);
 
     if (!invoice) notFound();
+
+    // 0% for Kleinunternehmer / § 4 Nr. 16; otherwise the regular 19% default.
+    const defaultVatRate = settings?.taxMode && settings.taxMode !== "standard" ? 0 : 19;
 
     const isCancelled = invoice.status === "storniert";
     const isSent = !isCancelled && invoice.sentAt != null;
@@ -66,7 +71,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
                         <p className="text-muted-foreground">Ändern Sie Positionen und erzeugen Sie die PDF neu.</p>
                     </div>
                     <div className="p-6 bg-white dark:bg-slate-950 rounded-lg border shadow-sm">
-                        <InvoiceForm customers={customers} invoice={invoice} />
+                        <InvoiceForm customers={customers} invoice={invoice} defaultVatRate={defaultVatRate} />
                     </div>
                 </>
             )}

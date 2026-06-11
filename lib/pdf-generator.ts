@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Invoice, InvoiceItem, Address } from "./schema";
+import { isTaxExemptMode, taxExemptionNote } from "./schema";
 import { embedZugferdIntoPDF } from "./zugferd-generator";
 import { getUnitLabel } from "./units";
 import { 
@@ -458,74 +459,104 @@ export async function generateInvoicePDF(invoice: Invoice, language: InvoiceLang
   // SECTION 6: Totals Block (Right-Aligned)
   // ===========================================
 
-  // Keep the totals block together: break to a new page if it would not fit.
-  const distinctVatRateCount = new Set(
-    invoice.items.map((it) => (typeof it.vatRate === 'number' && !isNaN(it.vatRate) ? it.vatRate : (invoice.taxRate || 19)))
-  ).size;
-  const totalsBlockHeight = 10 + 16 + distinctVatRateCount * 16 + 16 + 24 + 24;
-  if (y - totalsBlockHeight < contentBottom) {
-    startNewPage();
-  }
-
-  y -= 10;
-
   // Calculate VAT per rate
   const vatByRate = new Map<number, { basis: number; tax: number }>();
   let totalTax = 0;
-  
+
   for (const item of invoice.items) {
     const itemNet = item.quantity * item.unitPrice;
     // Ensure vatRate is a number - use item's vatRate if available, otherwise fall back to invoice taxRate
-    const itemVatRate = typeof item.vatRate === 'number' && !isNaN(item.vatRate) 
-      ? item.vatRate 
-      : (invoice.taxRate || 19);
-    
+    const itemVatRate = typeof item.vatRate === 'number' && !isNaN(item.vatRate)
+      ? item.vatRate
+      : (invoice.taxRate || 0);
+
     const itemTax = itemNet * (itemVatRate / 100);
     totalTax += itemTax;
-    
+
     const existing = vatByRate.get(itemVatRate) || { basis: 0, tax: 0 };
     vatByRate.set(itemVatRate, {
       basis: existing.basis + itemNet,
       tax: existing.tax + itemTax,
     });
   }
-  
+
   const grossTotal = netTotal + totalTax;
+
+  // VAT-free businesses (Kleinunternehmer / § 4 Nr. 16): no VAT lines, a single
+  // total plus the mandatory exemption note instead.
+  const taxExempt = isTaxExemptMode(invoice.seller.taxMode);
+  const exemptionNote = taxExemptionNote(invoice.seller.taxMode, invoice.seller.taxExemptionReason);
 
   const totalsLabelX = tableRight - 180;
   const totalsValueX = tableRight;
 
-  // Net total
-  const netLabel = language === 'de' ? 'Gesamtbetrag netto' : 'Net total';
-  drawText(netLabel, totalsLabelX, y);
-  drawTextRight(formatCurrency(netTotal, language), totalsValueX, y);
-  y -= 16;
+  if (taxExempt) {
+    // Page-break guard: total line + separator + wrapped note.
+    const noteLines = exemptionNote
+      ? wrapText(sanitizeText(exemptionNote), CONTENT_WIDTH, helvetica, 9)
+      : [];
+    const exemptBlockHeight = 10 + 14 + 24 + noteLines.length * 12 + 10;
+    if (y - exemptBlockHeight < contentBottom) {
+      startNewPage();
+    }
 
-  // VAT lines
-  const sortedVatRates = Array.from(vatByRate.entries()).sort((a, b) => a[0] - b[0]);
-  for (const [rate, amounts] of sortedVatRates) {
-    const vatLabel = language === 'de' ? `Umsatzsteuer ${rate}%` : `VAT ${rate}%`;
-    drawText(vatLabel, totalsLabelX, y);
-    drawTextRight(formatCurrency(amounts.tax, language), totalsValueX, y);
+    y -= 10;
+
+    // Single total (net == gross because there is no VAT)
+    const totalLabel = language === 'de' ? 'Gesamtbetrag' : 'Total amount';
+    drawText(totalLabel, totalsLabelX, y, { font: helveticaBold });
+    drawTextRight(formatCurrency(grossTotal, language), totalsValueX, y, { font: helveticaBold });
+    y -= 18;
+
+    // Mandatory exemption note (§ 4 Nr. 16 UStG / § 19 UStG)
+    for (const noteLine of noteLines) {
+      drawText(noteLine, MARGIN_LEFT, y, { size: 9, color: COLOR_GRAY });
+      y -= 12;
+    }
+
+    y -= 28;
+  } else {
+    // Keep the totals block together: break to a new page if it would not fit.
+    const distinctVatRateCount = vatByRate.size;
+    const totalsBlockHeight = 10 + 16 + distinctVatRateCount * 16 + 16 + 24 + 24;
+    if (y - totalsBlockHeight < contentBottom) {
+      startNewPage();
+    }
+
+    y -= 10;
+
+    // Net total
+    const netLabel = language === 'de' ? 'Gesamtbetrag netto' : 'Net total';
+    drawText(netLabel, totalsLabelX, y);
+    drawTextRight(formatCurrency(netTotal, language), totalsValueX, y);
     y -= 16;
+
+    // VAT lines
+    const sortedVatRates = Array.from(vatByRate.entries()).sort((a, b) => a[0] - b[0]);
+    for (const [rate, amounts] of sortedVatRates) {
+      const vatLabel = language === 'de' ? `Umsatzsteuer ${rate}%` : `VAT ${rate}%`;
+      drawText(vatLabel, totalsLabelX, y);
+      drawTextRight(formatCurrency(amounts.tax, language), totalsValueX, y);
+      y -= 16;
+    }
+
+    // Separator line
+    y -= 2;
+    page.drawLine({
+      start: { x: totalsLabelX, y },
+      end: { x: totalsValueX, y },
+      thickness: 0.5,
+      color: COLOR_BLACK,
+    });
+    y -= 12;
+
+    // Gross total (bold)
+    const grossLabel = language === 'de' ? 'Gesamtbetrag brutto' : 'Total amount';
+    drawText(grossLabel, totalsLabelX, y, { font: helveticaBold });
+    drawTextRight(formatCurrency(grossTotal, language), totalsValueX, y, { font: helveticaBold });
+
+    y -= 40;
   }
-
-  // Separator line
-  y -= 2;
-  page.drawLine({
-    start: { x: totalsLabelX, y },
-    end: { x: totalsValueX, y },
-    thickness: 0.5,
-    color: COLOR_BLACK,
-  });
-  y -= 12;
-
-  // Gross total (bold)
-  const grossLabel = language === 'de' ? 'Gesamtbetrag brutto' : 'Total amount';
-  drawText(grossLabel, totalsLabelX, y, { font: helveticaBold });
-  drawTextRight(formatCurrency(grossTotal, language), totalsValueX, y, { font: helveticaBold });
-
-  y -= 40;
 
   // ===========================================
   // SECTION 7: Outro/Payment Notice

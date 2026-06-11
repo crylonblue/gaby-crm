@@ -1,6 +1,7 @@
 import { zugferd } from "node-zugferd";
 import { EN16931 } from "node-zugferd/profile/en16931";
 import type { Invoice } from "./schema";
+import { isTaxExemptMode, taxExemptionNote } from "./schema";
 import { mapUnitToZugferdCode } from "./units";
 
 /**
@@ -13,6 +14,16 @@ import { mapUnitToZugferdCode } from "./units";
  * - BR-DE-15: Buyer Reference (BT-10) - Required reference
  */
 function mapInvoiceToZugferdData(invoice: Invoice) {
+  // Tax exemption (Kleinunternehmer § 19 / steuerfrei § 4 Nr. 16): VAT category
+  // code "E" (Exempt) with a mandatory reason text (BT-120), instead of "S"/"Z".
+  const taxExempt = isTaxExemptMode(invoice.seller.taxMode);
+  const exemptionReason =
+    taxExemptionNote(invoice.seller.taxMode, invoice.seller.taxExemptionReason) ||
+    "Steuerfrei";
+  // Tax category for a given rate, honouring the seller's exemption mode.
+  const categoryFor = (rate: number): "S" | "Z" | "E" =>
+    taxExempt ? "E" : rate === 0 ? "Z" : "S";
+
   // Group items by VAT rate and calculate totals per rate
   const vatGroups = new Map<number, { basisAmount: number; taxAmount: number }>();
   
@@ -50,9 +61,11 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
     calculatedAmount: parseFloat((Math.round(amounts.taxAmount * 100) / 100).toFixed(2)),
     typeCode: "VAT" as const,
     basisAmount: parseFloat((Math.round(amounts.basisAmount * 100) / 100).toFixed(2)),
-    // Use category "S" for standard rate, "Z" for zero rate, "E" for exempt
-    categoryCode: (rate === 0 ? "Z" : "S") as "S" | "Z" | "E",
-    rateApplicablePercent: rate,
+    // Category "S" standard, "Z" zero-rated, "E" exempt (§ 19 / § 4 Nr. 16)
+    categoryCode: categoryFor(rate),
+    rateApplicablePercent: taxExempt ? 0 : rate,
+    // BR-E / BR-DE: an exempt breakdown (category "E") requires a reason text (BT-120)
+    ...(taxExempt ? { exemptionReasonText: exemptionReason } : {}),
   }));
 
   // Ensure VAT ID has country prefix (required by ZUGFeRD)
@@ -128,7 +141,8 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
       specificationIdentifier: "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
       number: invoice.invoiceNumber,
       issueDate: invoice.invoiceDate,
-      typeCode: "380", // Commercial invoice (ZUGFeRD type code)
+      // 380 = commercial invoice; 384 = corrected invoice (used for Storno/negative totals)
+      typeCode: grossTotal < 0 ? "384" : "380",
       currency: invoice.currency,
       transaction: {
         tradeAgreement: {
@@ -233,9 +247,9 @@ function mapInvoiceToZugferdData(invoice: Invoice) {
         tradeSettlement: {
           tradeTax: {
             typeCode: "VAT" as const,
-            // Use "Z" for zero rate, "S" for standard rate
-            categoryCode: (itemVatRate === 0 ? "Z" : "S") as "S" | "Z",
-            rateApplicablePercent: itemVatRate,
+            // "S" standard, "Z" zero-rated, "E" exempt (§ 19 / § 4 Nr. 16)
+            categoryCode: categoryFor(itemVatRate),
+            rateApplicablePercent: taxExempt ? 0 : itemVatRate,
           },
               monetarySummation: {
                 lineTotalAmount: itemTotal,

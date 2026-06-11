@@ -77,6 +77,8 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 interface InvoiceFormProps {
     customers: (Customer & { yearlyBudget?: number })[];
     invoice?: Invoice | null;
+    /** Default VAT rate for newly added line items (0 for Kleinunternehmer / § 4 Nr. 16). */
+    defaultVatRate?: number;
 }
 
 function safeParseLineItemsJson(lineItemsJson: string | null): LineItem[] {
@@ -90,7 +92,7 @@ function safeParseLineItemsJson(lineItemsJson: string | null): LineItem[] {
     }
 }
 
-export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
+export function InvoiceForm({ customers, invoice, defaultVatRate = 19 }: InvoiceFormProps) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -314,6 +316,7 @@ export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
                                 <LineItemsEditor
                                     lineItems={field.value}
                                     onChange={field.onChange}
+                                    defaultVatRate={defaultVatRate}
                                     disabled={!customerComplete}
                                     disabledMessage={!selectedCustomer
                                         ? "Bitte wählen Sie zuerst einen Kunden aus."
@@ -331,7 +334,7 @@ export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
                     <div className="flex items-center justify-between">
                         <div>
                             <div className="text-sm font-medium text-muted-foreground mb-1">
-                                Rechnungsbetrag (inkl. MwSt.)
+                                {vatTotal > 0 ? "Rechnungsbetrag (inkl. MwSt.)" : "Rechnungsbetrag"}
                             </div>
                             <div className="text-2xl font-bold text-primary">
                                 {grossTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
@@ -339,9 +342,11 @@ export function InvoiceForm({ customers, invoice }: InvoiceFormProps) {
                         </div>
                     </div>
                     <div className="mt-2 space-y-1">
-                        <div className="text-xs text-muted-foreground">
-                            Netto: {netTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} + MwSt.: {vatTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
-                        </div>
+                        {vatTotal > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                                Netto: {netTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} + MwSt.: {vatTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                            </div>
+                        )}
                         {selectedCustomer && (
                             <div className="text-xs text-muted-foreground">
                                 Abgerechnet dieses Jahr: {yearlyBudget.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}

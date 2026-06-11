@@ -82,11 +82,12 @@ function NumberInput({ value, onChange, min, max, className, placeholder }: Numb
 interface LineItemsEditorProps {
     lineItems: LineItem[];
     onChange: (items: LineItem[]) => void;
+    defaultVatRate?: number;
     disabled?: boolean;
     disabledMessage?: string;
 }
 
-export function LineItemsEditor({ lineItems, onChange, disabled = false, disabledMessage }: LineItemsEditorProps) {
+export function LineItemsEditor({ lineItems, onChange, defaultVatRate = 19, disabled = false, disabledMessage }: LineItemsEditorProps) {
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
     const [pendingTemplateItemId, setPendingTemplateItemId] = useState<string | null>(null);
     const addLineItem = () => {
@@ -96,7 +97,7 @@ export function LineItemsEditor({ lineItems, onChange, disabled = false, disable
             quantity: 0,
             unit: 'piece',
             unitPrice: 0,
-            vatRate: 19,
+            vatRate: defaultVatRate,
             total: 0,
         };
         onChange([...lineItems, newItem]);

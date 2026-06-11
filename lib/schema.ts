@@ -25,6 +25,36 @@ export const XRechnungContactSchema = z.object({
   { message: "BR-DE-2: Mindestens ein Kontaktfeld (Name, Telefon oder E-Mail) ist für XRechnung erforderlich" }
 );
 
+// VAT handling mode for the seller. Drives the default VAT rate, the note printed
+// on the invoice and the XRechnung tax category code.
+export const TaxModeSchema = z.enum(["standard", "kleinunternehmer", "exempt_16"]);
+export type TaxMode = z.infer<typeof TaxModeSchema>;
+
+/** Default VAT rate (%) for a freshly added line item, derived from the tax mode. */
+export function defaultVatRateForMode(mode: TaxMode | null | undefined): number {
+  return mode && mode !== "standard" ? 0 : 19;
+}
+
+/** Whether the seller charges no VAT at all (Kleinunternehmer or steuerfrei). */
+export function isTaxExemptMode(mode: TaxMode | null | undefined): boolean {
+  return mode === "kleinunternehmer" || mode === "exempt_16";
+}
+
+/**
+ * Mandatory note that must appear on a VAT-free invoice.
+ * A custom reason (configured in seller settings) wins; otherwise a sensible default.
+ */
+export function taxExemptionNote(
+  mode: TaxMode | null | undefined,
+  customReason?: string | null
+): string | undefined {
+  if (!isTaxExemptMode(mode)) return undefined;
+  if (customReason && customReason.trim()) return customReason.trim();
+  return mode === "kleinunternehmer"
+    ? "Kein Steuerausweis gemäß § 19 UStG (Kleinunternehmer)."
+    : "Umsatzsteuerfrei gemäß § 4 Nr. 16 UStG.";
+}
+
 export const SellerSchema = z.object({
   name: z.string().min(1, "Seller name is required"),
   subHeadline: z.string().optional(),
@@ -34,6 +64,8 @@ export const SellerSchema = z.object({
   taxNumber: z.string().optional(),
   vatId: z.string().optional(),
   ikNumber: z.string().optional(), // Institutionskennzeichen (healthcare)
+  taxMode: TaxModeSchema.optional(), // VAT handling mode (default handled at read time)
+  taxExemptionReason: z.string().optional(), // Custom § 4 Nr. 16 / § 19 note
   contact: ContactSchema.optional(), // XRechnung BR-DE-2
   // Legal information for footer
   court: z.string().optional(), // e.g., "Amtsgericht München"

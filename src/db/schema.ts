@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const customers = sqliteTable("customers", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -86,7 +86,11 @@ export const invoices = sqliteTable("invoices", {
     emailBody: text("email_body"), // Body text for the email
     // XRechnung XML
     xrechnungXmlUrl: text("xrechnung_xml_url"), // URL to the XRechnung XML file
-});
+}, (table) => ({
+    // GoBD: invoice numbers must be unique. SQLite treats NULLs as distinct, so
+    // not-yet-numbered drafts are unaffected; duplicate numbers are rejected.
+    invoiceNumberUnique: uniqueIndex("invoices_invoice_number_unique").on(table.invoiceNumber),
+}));
 
 export const customerBudgets = sqliteTable("customer_budgets", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -118,6 +122,13 @@ export const sellerSettings = sqliteTable("seller_settings", {
     vatId: text("vat_id"),
     // Institutionskennzeichen (IK number) — required for billing health insurances
     ikNumber: text("ik_number"),
+    // VAT handling mode:
+    //  - 'standard'        : regelbesteuert (19%/7% USt ausgewiesen)
+    //  - 'kleinunternehmer': § 19 UStG (kein USt-Ausweis)
+    //  - 'exempt_16'       : steuerfrei nach § 4 Nr. 16 UStG (Pflege-/Betreuungsleistungen)
+    taxMode: text("tax_mode").notNull().default("exempt_16"),
+    // Free-text exemption note printed on the invoice / used as XRechnung BT-120 reason
+    taxExemptionReason: text("tax_exemption_reason"),
     // Legal Information
     court: text("court"),
     registerNumber: text("register_number"),

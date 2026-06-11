@@ -1,5 +1,6 @@
 import type { Invoice as DbInvoice, SellerSettings } from "@/db/schema";
 import type { Invoice, Seller, BankDetails, Address, InvoiceItem } from "../../lib/schema";
+import { defaultVatRateForMode } from "../../lib/schema";
 import { getSellerSettings } from "./actions/seller.actions";
 
 /**
@@ -25,6 +26,8 @@ export async function getSellerInfo(): Promise<Seller> {
       taxNumber: settings.taxNumber ?? undefined,
       vatId: settings.vatId ?? undefined,
       ikNumber: settings.ikNumber ?? undefined,
+      taxMode: (settings.taxMode as Seller["taxMode"]) ?? "exempt_16",
+      taxExemptionReason: settings.taxExemptionReason ?? undefined,
       contact: settings.contactName || settings.contactPhone || settings.contactEmail
         ? {
             name: settings.contactName ?? undefined,
@@ -53,6 +56,8 @@ export async function getSellerInfo(): Promise<Seller> {
     taxNumber: process.env.SELLER_TAX_NUMBER,
     vatId: process.env.SELLER_VAT_ID,
     ikNumber: process.env.SELLER_IK_NUMBER,
+    taxMode: (process.env.SELLER_TAX_MODE as Seller["taxMode"]) ?? "exempt_16",
+    taxExemptionReason: process.env.SELLER_TAX_EXEMPTION_REASON,
     contact: process.env.SELLER_CONTACT_NAME || process.env.SELLER_CONTACT_PHONE || process.env.SELLER_CONTACT_EMAIL
       ? {
           name: process.env.SELLER_CONTACT_NAME,
@@ -188,15 +193,19 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
   const bankDetails = await getBankDetails();
   const logoUrl = await getLogoUrl();
 
+  // Default VAT rate for any item/legacy field that doesn't carry its own rate.
+  // Derived from the seller's tax mode (0% for Kleinunternehmer / § 4 Nr. 16).
+  const fallbackVatRate = defaultVatRateForMode(seller.taxMode);
+
   // Build invoice items - prefer lineItemsJson if available, otherwise fall back to hours/km
   const items: InvoiceItem[] = [];
-  
+
   if (dbInvoice.lineItemsJson) {
     try {
       const lineItems = JSON.parse(dbInvoice.lineItemsJson);
       items.push(...lineItems.map((item: any) => {
         // Ensure vatRate is a number and has a default value
-        let vatRate = 19; // Default to 19%
+        let vatRate = fallbackVatRate;
         
         if (typeof item.vatRate === 'number' && !isNaN(item.vatRate)) {
           vatRate = item.vatRate;
@@ -230,7 +239,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
         quantity: dbInvoice.hours,
         unit: "hour",
         unitPrice: dbInvoice.ratePerHour,
-        vatRate: 19, // 19% VAT
+        vatRate: fallbackVatRate,
       });
     }
 
@@ -241,7 +250,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
         quantity: dbInvoice.km,
         unit: "km",
         unitPrice: dbInvoice.ratePerKm,
-        vatRate: 19, // 19% VAT
+        vatRate: fallbackVatRate,
       });
     }
 
@@ -252,7 +261,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
         quantity: 1,
         unit: "piece",
         unitPrice: 0,
-        vatRate: 19,
+        vatRate: fallbackVatRate,
       });
     }
   }
@@ -307,7 +316,7 @@ export async function mapDbInvoiceToInvoice(dbInvoice: DbInvoice, invoiceNumber:
     },
     insurance,
     items,
-    taxRate: 19, // 19% VAT
+    taxRate: fallbackVatRate,
     currency: "EUR",
     logoUrl,
     bankDetails,
