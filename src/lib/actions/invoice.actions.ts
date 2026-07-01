@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { generateInvoicePDF } from "../../../lib/pdf-generator";
 import { uploadToS3, uploadXRechnungXmlToS3 } from "../../../lib/s3";
 import { generateXRechnungXML } from "../../../lib/zugferd-generator";
-import { generateInvoiceNumber, mapDbInvoiceToInvoice } from "../invoice-helpers";
+import { generateInvoiceNumber, mapDbInvoiceToInvoice, isXRechnungEnabled } from "../invoice-helpers";
 import { calculateInvoiceGrossAmount } from "../invoice-utils";
 
 async function upsertCustomerBudgetAmount(params: { customerId: number; year: number; amount: number }) {
@@ -131,20 +131,24 @@ export async function createInvoice(data: NewInvoice) {
 
         console.log("PDF generated and uploaded:", pdfUrl);
 
-        // Generate and upload XRechnung XML
+        // Generate and upload XRechnung XML (unless disabled in seller settings)
         let xrechnungXmlUrl: string | null = null;
-        try {
-            console.log("Generating XRechnung XML for invoice:", invoiceNumber);
-            const xmlContent = await generateXRechnungXML(invoiceForPdf);
-            xrechnungXmlUrl = await uploadXRechnungXmlToS3(
-                userId,
-                invoiceId.toString(),
-                xmlContent
-            );
-            console.log("XRechnung XML generated and uploaded:", xrechnungXmlUrl);
-        } catch (xmlError) {
-            // Log but don't fail - XRechnung XML is optional
-            console.error("Error generating XRechnung XML (continuing without it):", xmlError);
+        if (await isXRechnungEnabled()) {
+            try {
+                console.log("Generating XRechnung XML for invoice:", invoiceNumber);
+                const xmlContent = await generateXRechnungXML(invoiceForPdf);
+                xrechnungXmlUrl = await uploadXRechnungXmlToS3(
+                    userId,
+                    invoiceId.toString(),
+                    xmlContent
+                );
+                console.log("XRechnung XML generated and uploaded:", xrechnungXmlUrl);
+            } catch (xmlError) {
+                // Log but don't fail - XRechnung XML is optional
+                console.error("Error generating XRechnung XML (continuing without it):", xmlError);
+            }
+        } else {
+            console.log("XRechnung XML generation disabled in settings, skipping");
         }
 
         // Update invoice with PDF URL and XRechnung XML URL
@@ -270,15 +274,17 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
                 );
 
                 let xrechnungXmlUrl: string | null = null;
-                try {
-                    const xmlContent = await generateXRechnungXML(invoiceForPdf);
-                    xrechnungXmlUrl = await uploadXRechnungXmlToS3(
-                        userId,
-                        id.toString(),
-                        xmlContent
-                    );
-                } catch (xmlError) {
-                    console.error("Error generating XRechnung XML (continuing without it):", xmlError);
+                if (await isXRechnungEnabled()) {
+                    try {
+                        const xmlContent = await generateXRechnungXML(invoiceForPdf);
+                        xrechnungXmlUrl = await uploadXRechnungXmlToS3(
+                            userId,
+                            id.toString(),
+                            xmlContent
+                        );
+                    } catch (xmlError) {
+                        console.error("Error generating XRechnung XML (continuing without it):", xmlError);
+                    }
                 }
 
                 await db.update(invoices)
@@ -419,11 +425,13 @@ export async function cancelInvoice(id: number) {
             const pdfUrl = await uploadToS3(userId, stornoId.toString(), `invoice-${stornoNumber}.pdf`, pdfBuffer, "application/pdf");
 
             let xrechnungXmlUrl: string | null = null;
-            try {
-                const xmlContent = await generateXRechnungXML(invoiceForPdf);
-                xrechnungXmlUrl = await uploadXRechnungXmlToS3(userId, stornoId.toString(), xmlContent);
-            } catch (xmlError) {
-                console.error("Error generating XRechnung XML for Storno (continuing without it):", xmlError);
+            if (await isXRechnungEnabled()) {
+                try {
+                    const xmlContent = await generateXRechnungXML(invoiceForPdf);
+                    xrechnungXmlUrl = await uploadXRechnungXmlToS3(userId, stornoId.toString(), xmlContent);
+                } catch (xmlError) {
+                    console.error("Error generating XRechnung XML for Storno (continuing without it):", xmlError);
+                }
             }
 
             await db.update(invoices)

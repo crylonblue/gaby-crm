@@ -129,6 +129,9 @@ export const sellerSettings = sqliteTable("seller_settings", {
     taxMode: text("tax_mode").notNull().default("exempt_16"),
     // Free-text exemption note printed on the invoice / used as XRechnung BT-120 reason
     taxExemptionReason: text("tax_exemption_reason"),
+    // Whether to generate and attach the XRechnung (XML) e-invoice. Some health
+    // insurances (e.g. Barmer) occasionally reject the XML, so it can be disabled.
+    includeXRechnung: integer("include_xrechnung", { mode: "boolean" }).notNull().default(true),
     // Legal Information
     court: text("court"),
     registerNumber: text("register_number"),

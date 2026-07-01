@@ -40,6 +40,7 @@ export async function updateSellerSettings(data: {
     ikNumber?: string;
     taxMode?: string;
     taxExemptionReason?: string;
+    includeXRechnung?: boolean;
     court?: string;
     registerNumber?: string;
     managingDirector?: string;
@@ -81,6 +82,7 @@ export async function updateSellerSettings(data: {
                 ikNumber: data.ikNumber,
                 taxMode: data.taxMode,
                 taxExemptionReason: data.taxExemptionReason,
+                includeXRechnung: data.includeXRechnung ?? true,
                 court: data.court,
                 registerNumber: data.registerNumber,
                 managingDirector: data.managingDirector,

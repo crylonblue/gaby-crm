@@ -72,6 +72,15 @@ export async function getSellerInfo(): Promise<Seller> {
 }
 
 /**
+ * Whether the XRechnung (XML) e-invoice should be generated and attached.
+ * Defaults to true (enabled) when no setting exists or the column is null.
+ */
+export async function isXRechnungEnabled(): Promise<boolean> {
+  const settings = await getSellerSettings();
+  return settings?.includeXRechnung ?? true;
+}
+
+/**
  * Gets bank details from database
  * Falls back to environment variables if not configured
  */

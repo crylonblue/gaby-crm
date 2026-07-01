@@ -14,6 +14,7 @@ import {
     FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
@@ -46,6 +47,7 @@ const sellerSettingsSchema = z.object({
     ikNumber: z.string().optional(),
     taxMode: z.enum(["standard", "kleinunternehmer", "exempt_16"]),
     taxExemptionReason: z.string().optional(),
+    includeXRechnung: z.boolean(),
     court: z.string().optional(),
     registerNumber: z.string().optional(),
     managingDirector: z.string().optional(),
@@ -87,6 +89,7 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
             ikNumber: settings?.ikNumber || "",
             taxMode: (settings?.taxMode as "standard" | "kleinunternehmer" | "exempt_16") || "exempt_16",
             taxExemptionReason: settings?.taxExemptionReason || "",
+            includeXRechnung: settings?.includeXRechnung ?? true,
             court: settings?.court || "",
             registerNumber: settings?.registerNumber || "",
             managingDirector: settings?.managingDirector || "",
@@ -434,6 +437,29 @@ export function SellerSettingsForm({ settings }: SellerSettingsFormProps) {
                             )}
                         />
                     )}
+
+                    <FormField
+                        control={form.control}
+                        name="includeXRechnung"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>XRechnung (XML) mitsenden</FormLabel>
+                                    <FormDescription>
+                                        Hängt die elektronische Rechnung (XRechnung-XML) zusätzlich zur
+                                        PDF an. Deaktivieren, wenn eine Krankenkasse die XML nicht
+                                        annimmt (z. B. Barmer).
+                                    </FormDescription>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <FormField
