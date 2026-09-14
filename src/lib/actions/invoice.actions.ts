@@ -238,28 +238,33 @@ export async function updateInvoice(id: number, data: Partial<NewInvoice>) {
         }
 
         const oldYear = new Date(inv.date).getFullYear();
-        const newDate = data.date ?? inv.date;
+        // Editing re-issues the invoice: the invoice date moves to today, and with it the
+        // payment term (the XRechnung due date is derived as invoice date + 14 days).
+        const newDate = new Date().toISOString();
         const newYear = new Date(newDate).getFullYear();
+
+        // The invoice number encodes the month (YYYY-MM-XXXX). If the new invoice date falls
+        // into a different month, re-issue the number so number and date stay consistent.
+        // Safe to do here: editing is only possible before the invoice has been sent.
+        const monthPrefix = newDate.slice(0, 7); // YYYY-MM
+        const invoiceNumber = inv.invoiceNumber?.startsWith(monthPrefix)
+            ? inv.invoiceNumber
+            : await generateInvoiceNumber(newDate);
 
         await db.update(invoices)
             .set({
                 ...data,
                 date: newDate,
+                invoiceNumber,
             })
             .where(eq(invoices.id, id));
 
-        // Re-generate PDF & XRechnung if enabled and invoice number exists (or can be generated)
+        // Re-generate PDF & XRechnung with the refreshed date/number
         const skipS3Upload = process.env.SKIP_S3_UPLOAD === 'true';
         if (!skipS3Upload) {
             const refreshed = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
             const updatedInv = refreshed[0];
             if (updatedInv) {
-                const invoiceNumber = updatedInv.invoiceNumber || await generateInvoiceNumber(updatedInv.date);
-                if (!updatedInv.invoiceNumber) {
-                    await db.update(invoices).set({ invoiceNumber }).where(eq(invoices.id, id));
-                    updatedInv.invoiceNumber = invoiceNumber;
-                }
-
                 const invoiceForPdf = await mapDbInvoiceToInvoice(updatedInv, invoiceNumber);
                 const pdfBuffer = await generateInvoicePDF(invoiceForPdf, 'de');
 
